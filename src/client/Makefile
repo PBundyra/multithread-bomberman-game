@@ -1,0 +1,22 @@
+CCP=g++
+client_src = client
+server_src = server
+client_bin = robots-client
+server_bin = robots-server
+
+all: compile_client compile_server
+clean: clean_all
+
+compile_client: $(client_src).cpp
+	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o $(client_bin) $(client_src).cpp -lboost_program_options \
+	&& ./robots-client -p 420 -s students.mimuw.edu.pl:10100 -d 192:321 -n essa
+
+
+compile_server: $(server_src).cpp
+	$(CCP) -Wall -Wextra -std=c++20 -O2 -o $(server_bin) $(server_src).cpp
+
+clean_binaries:
+	rm *.o
+
+clean_all:
+	rm *.o robots-*
