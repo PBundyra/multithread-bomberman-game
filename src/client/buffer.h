@@ -29,7 +29,7 @@ public:
 
     void write_into_buffer(uint64_t msg);
 
-    void write_str_into_buffer(std::string &msg);
+    void write_str_into_buffer(const char *msg, const size_t len);
 
     [[nodiscard]] size_t get_no_bytes() const;
 

@@ -24,9 +24,11 @@ void Buffer::write_into_buffer(uint64_t msg) {
     no_bytes += sizeof(uint64_t);
 }
 
-void Buffer::write_str_into_buffer(std::string &msg) {
-    memcpy(buffer + no_bytes, msg.c_str(), msg.size());
-    no_bytes += msg.size();
+void Buffer::write_str_into_buffer(const char *msg, const size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        write_into_buffer((uint8_t) msg[i]);
+    }
+    no_bytes += len;
 }
 
 size_t Buffer::get_no_bytes() const {

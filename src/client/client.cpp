@@ -130,21 +130,26 @@ void Client::parse_hello(const char *msg) {
     uint8_t server_name_len = *(uint8_t *) (msg + no_read_bytes);
     buf_server_to_gui.write_into_buffer(server_name_len);
     no_read_bytes++;
-    unsigned i = no_read_bytes;
-    for (; i < no_read_bytes + server_name_len; ++i) {
-        buf_server_to_gui.write_into_buffer((uint8_t) msg[i]);
-    }
+    // server name
+    buf_server_to_gui.write_str_into_buffer(msg + no_read_bytes, server_name_len);
     no_read_bytes += server_name_len;
+    // players count
     buf_server_to_gui.write_into_buffer(*(uint8_t *) (msg + no_read_bytes));
     no_read_bytes += 1;
+    // size x
     buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
     no_read_bytes += 2;
+    // size y
     buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
     no_read_bytes += 2;
+    // game length
     buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
     no_read_bytes += 2;
+    // explosion radius
     buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
     no_read_bytes += 2;
+    // bomb timer
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
     map = Map(buf_server_to_gui);
 }
 
