@@ -14,6 +14,8 @@ using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
+#define MAX_BUFFER_SIZE 1024
+
 struct sockaddr_in get_send_address(const char *host, uint16_t port) {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -22,7 +24,7 @@ struct sockaddr_in get_send_address(const char *host, uint16_t port) {
     hints.ai_protocol = IPPROTO_UDP;
 
     struct addrinfo *address_result;
-    CHECK(getaddrinfo(host, NULL, &hints, &address_result));
+    CHECK(getaddrinfo(host, nullptr, &hints, &address_result));
 
     struct sockaddr_in send_address;
     send_address.sin_family = AF_INET; // IPv4
@@ -56,8 +58,8 @@ input_params_t parse_cli_params(int argc, char **argv) {
         string display_address = vm["display-address"].as<string>();
         string server_address = vm["server-address"].as<string>();
         size_t server_port_ind = server_address.find_last_of(':');
-        params.port = numeric_cast<port_t>(lexical_cast<int>(server_address.substr(server_port_ind + 1)));
-        params.gui_host = server_address.substr(0, server_port_ind);
+        params.server_port = numeric_cast<port_t>(lexical_cast<int>(server_address.substr(server_port_ind + 1)));
+        params.server_host = server_address.substr(0, server_port_ind);
         params.server_addr = get_address(&params.server_host[0], params.server_port);
         size_t gui_port_ind = display_address.find_last_of(':');
         params.gui_port = numeric_cast<port_t>(lexical_cast<int>(display_address.substr(gui_port_ind + 1)));
@@ -100,10 +102,19 @@ void print_cli(input_params_t &params) {
 // Dostajesz wiadomosc od GUI (krotka) - input gracza - z klawiatury
 // Zapisujemy do buffera
 // Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
+void Client::gui_to_server_handler() {
+    for (int i = 0; i < 10; i++) {
+        sleep(1);
+        cout << "gui_to_server_handler\n";
+    }
+}
 
-
-
-
+void Client::server_to_gui_handler() {
+    for (int i = 0; i < 5; i++) {
+        sleep(2);
+        cout << "server_to_gui_handler\n";
+    }
+}
 
 void Client::parse_events(vector<shared_ptr<Event>> &events) {
     // w petli
@@ -119,7 +130,7 @@ void Client::parse_hello(const char *msg, size_t len) {
     unsigned int name_len = *(uint8_t *) (msg + no_read_el);
     no_read_el++;
     cout << "name len: " << name_len << "\n";
-    string server_name = "";
+    string server_name;
     unsigned i = no_read_el;
     for (; i < no_read_el + name_len; ++i) {
         server_name += msg[i];
@@ -145,13 +156,18 @@ void Client::parse_hello(const char *msg, size_t len) {
     this->map = Map(server_name, size_x, size_y, game_length);
 }
 
-void Client::connect_to_gui(const input_params_t &params) {};
-
-void Client::connect_to_server(const input_params_t &params) {};
-
-
 void Client::run(input_params_t &params) {
-    struct sockaddr_in server_address = get_address(params.server_host, params.server_port);
+    size_t received_len = receive_message(tcp_socket_fd, buf_server_to_gui.get_buffer(), MAX_BUFFER_SIZE, 0);
+    if (received_len == 0) {
+        cout << "Server closed connection\n";
+        exit(0);
+    }
+    parse_hello(buf_server_to_gui.get_buffer(), received_len);
+    thread gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
+    thread server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
+    gui_to_server_thread.join();
+    server_to_gui_thread.join();
+}
 
     // Klient:
 // - laczy sie z GUI i Serverem
@@ -159,7 +175,6 @@ void Client::run(input_params_t &params) {
 // - odpala 2 watki
 // - pierwszy watek przesyla wiadomosci z GUI do Servera
 // - drugi watek przesyla wiadomosci z Servera do GUI
-}
 
 
 //        while (true) {

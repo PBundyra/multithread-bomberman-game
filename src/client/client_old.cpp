@@ -34,6 +34,7 @@
 #include "map.h"
 #include "player.h"
 #include "utils.h"
+#include "client.h"
 
 
 namespace po = boost::program_options;
@@ -258,6 +259,16 @@ public:
         // odczytujemy wiadomosc od servera
     };
 };
+
+void Client::gui_to_server_handler() {
+    for (int i = 0; i < 10; i++)
+        cout << "gui_to_server_handler\n";
+}
+
+void Client::server_to_gui_handler() {
+    for (int i = 0; i < 10; i++)
+        cout << "server_to_gui_handler\n";
+}
 
 int main(int argc, char **argv) {
     input_params_t input_params = parse_cli_params(argc, argv);

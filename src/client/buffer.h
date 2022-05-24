@@ -16,6 +16,10 @@ private:
 public:
     Buffer() : no_bytes(0) {}
 
+    char *get_buffer() {
+        return buffer;
+    }
+
     void write_into_buffer(uint8_t msg);
 
     void write_into_buffer(uint16_t msg);

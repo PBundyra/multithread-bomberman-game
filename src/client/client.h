@@ -51,8 +51,6 @@ typedef struct input_params_t {
     string server_host;
     struct sockaddr_in server_addr;
     struct sockaddr_in gui_addr;
-//    boost::asio::ip::address tcp_addr;
-//    boost::asio::ip::address udp_addr;
 } input_params_t;
 
 input_params_t parse_cli_params(int argc, char **argv);
@@ -62,34 +60,40 @@ void print_cli(input_params_t &params);
 
 class Client {
 private:
-//    unique_ptr<Server> server;
+    using list_len_t = uint32_t;
+    using map_len_t = uint32_t;
+
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
     Map map;
 //    Lobby lobby;
     atomic_bool is_game_started;
     string name;
-
-
-    using list_len_t = uint32_t;
-    using map_len_t = uint32_t;
+    int tcp_socket_fd;
+    int udp_socket_fd;
 
     void parse_events(vector<shared_ptr<Event>> &events);
 
     void parse_hello(const char *msg, size_t len);
 
-    void connect_to_gui(const input_params_t &params);
+    void gui_to_server_handler();
 
-    void connect_to_server(const input_params_t &params);
+    void server_to_gui_handler();
 
 public:
     Client(input_params_t &input_params) : name(input_params.player_name) {
         is_game_started = false;
+        tcp_socket_fd = open_tcp_socket();
+        connect_socket(tcp_socket_fd, &input_params.server_addr);
+        udp_socket_fd = open_udp_socket();
+    }
+
+    ~Client() {
+        close(tcp_socket_fd);
+        close(udp_socket_fd);
     }
 
     void run(input_params_t &params);
 };
-
-
 
 #endif //CLIENT_H
