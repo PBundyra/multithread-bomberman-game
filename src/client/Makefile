@@ -6,6 +6,10 @@ server_bin = robots-server
 
 all: compile_client compile_server
 clean: clean_all
+compile_buffer: buffer
+
+buffer: buffer.cpp buffer.h
+	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o buffer buffer.cpp
 
 compile_client: $(client_src).cpp
 	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o $(client_bin) $(client_src).cpp -lboost_program_options \

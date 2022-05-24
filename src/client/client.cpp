@@ -258,6 +258,7 @@ public:
     void start() {
         message_ = make_daytime_string();
 
+
         boost::asio::async_write(socket_, boost::asio::buffer(message_),
                                  boost::bind(&tcp_connection::handle_write, shared_from_this()));
         std::cout << "Wyslalem po tcp\n";
@@ -281,71 +282,83 @@ private:
 class tcp_server {
 public:
     tcp_server(boost::asio::io_context &io_context, const address &addr, port_t port)
-            : io_context(io_context), acceptor(io_context, tcp::endpoint(addr, port)) {
+            : tcp_socket(io_context, tcp::endpoint(addr, port)) {
         start_accept();
     }
 
 private:
     friend class Client;
 
-    boost::asio::io_context &io_context;
-    tcp::acceptor acceptor;
+    tcp::socket tcp_socket;
+    char tcp_buf[1024];
+//    tcp::endpoint tcp_endpoint;
+//    boost::asio::io_context &io_context;
+//    tcp::acceptor acceptor;
 
     void start_accept() {
-        tcp_connection::pointer new_connection = tcp_connection::create(io_context);
-
-        acceptor.async_accept(new_connection->socket(),
-                              boost::bind(&tcp_server::handle_accept, this, new_connection,
-                                          boost::asio::placeholders::error));
+//        tcp_connection::pointer new_connection = tcp_connection::create(io_context);
+//
+        tcp_socket.async_read_some(boost::asio::buffer(tcp_buf),
+                                   boost::bind(&tcp_server::handle_accept, this,
+                                               boost::asio::placeholders::error));
+//        acceptor.async_accept(new_connection->tcp_socket(),
+//                              boost::bind(&tcp_server::handle_accept, this, new_connection,
+//                                          boost::asio::placeholders::error));
     }
 
     void handle_accept(const tcp_connection::pointer &new_connection, const boost::system::error_code &error) {
-        if (!error) {
-            new_connection->start();
-        }
+//        if (!error) {
+//            new_connection->start();
+//        }
+        tcp_socket.async_write_some(boost::asio::buffer(tcp_buf),
+                                    boost::bind(&tcp_server::handle_accept, this,
+                                                boost::asio::placeholders::error));
         start_accept();
     }
 };
 
 class udp_server {
 public:
-    udp_server(boost::asio::io_context &io_context, address addr, port_t port)
-            : socket(io_context, udp::endpoint(addr, port)) {
+    udp_server(boost::asio::io_context &io_context, const address& addr, port_t port)
+            : udp_socket(io_context, udp::endpoint(addr, port)), remote_endpoint(addr, port) {
         start_receive();
     }
 
 private:
     friend class Client;
 
-    udp::socket socket;
+    udp::socket udp_socket;
     udp::endpoint remote_endpoint;
-    boost::array<char, 1> recv_buffer;
+//    boost::array<char, 1> recv_buffer;
+    char udp_buf[1024];
 
     void start_receive() {
-        socket.async_read_some(boost::asio::buffer(recv_buffer),
-                               boost::bind(&udp_server::handle_receive, this,
-                                           boost::asio::placeholders::error,
-                                           boost::asio::placeholders::bytes_transferred));
-
-
-        socket.async_receive_from(
-                boost::asio::buffer(recv_buffer), remote_endpoint,
+//        tcp_socket.async_read_some(boost::asio::buffer(recv_buffer),
+//                               boost::bind(&udp_server::handle_receive, this,
+//                                           boost::asio::placeholders::error,
+//                                           boost::asio::placeholders::bytes_transferred));
+        udp_socket.async_receive_from(
+                boost::asio::buffer(udp_buf), remote_endpoint,
                 boost::bind(&udp_server::handle_receive, this,
                             boost::asio::placeholders::error));
     }
+//    void udp_handler(const boost::system::error_code &error, size_t bytes_transferred) {
+//        cout << "ESSA UDALO SIE\n";
+//    }
 
-    void handle_receive(const boost::system::error_code &error) {
+    void handle_receive(const boost::system::error_code &error, size_t bytes_transferred) {
         if (!error) {
             boost::shared_ptr<std::string> message(
                     new std::string(make_daytime_string()));
 
-            socket.async_send_to(boost::asio::buffer(*message), remote_endpoint,
-                                 boost::bind(&udp_server::handle_send, this, message));
+            udp_socket.async_send_to(boost::asio::buffer(*message), remote_endpoint,
+                                     boost::bind(&udp_server::handle_send, this, message));
             std::cout << "Wyslalem po udp\n";
 
             start_receive();
         }
     }
+
 
     void handle_send(boost::shared_ptr<std::string> /*message*/) {
     }
@@ -407,23 +420,6 @@ private:
         this->map = Map(server_name, size_x, size_y, game_length);
     }
 
-    void spectate() {
-        // dodaje wszystkich graczy uzywajac komunikatu GameStarted
-        vector<shared_ptr<Event>> events;
-        parse_events(events);
-        map.apply_changes(events);
-        map.generate_respond(buf);
-    };
-    
-    void play() {
-        // używając poll
-        // otrzymuj wiadomosc od servera
-        // jak tylko ją otrzymujesz parsuj zmiany na mapie
-        // wysyłaj do gui mape
-        // w międzyczasie otrzymuj wiadomosc od gui
-        // napierdalaj do servera wszystko co przychodzi od gui
-    };
-
 public:
     Client(input_params_t &input_params) {
         name = input_params.player_name;
@@ -483,17 +479,17 @@ public:
         }
 
 
-        while (true) {
+//        while (true) {
             // niezaleznie od stanu jesli dostajemy komunikat od serwera go obłusgujemy
             // jesli komunikat to AcceptedPlayer/Turn to wysylami zmiany do GUI
             // jesli dostales komunikat GameStarted to trzeba zmienic stan na Game
             // jesli dostales komunikat GameEnded to trzeba zmienic stan na Lobby
 
-            if (state == GameState::Lobby) {
+//            if (state == GameState::Lobby) {
                 // wszystkie komunikaty od gui leca do serwera jako Join
-            } else {
+//            } else {
                 // wszystkie komunikaty od gui leca tak jak przyszly
-            }
+//            }
 
 
 
@@ -504,7 +500,7 @@ public:
             // jeśli rozgrywka jest w Lobby to jeśli dostałeś komunikat od GUI, to wyślij Join do Servera
             // po zaakceptowaniu wejdz w tryb play
             // odczytujemy wiadomosc od servera
-        }
+//        }
     };
 };
 
@@ -514,9 +510,9 @@ int main(int argc, char **argv) {
 //    cout << asio::ip::address::from_string(input_params.server_address).to_string() << endl;
 //    asio::ip::address adr = asio::ip::address::from_string(input_params.server_address);
     Client client = Client(input_params);
-    client.connect_to_server(input_params);
+//    client.connect_to_server(input_params);
 //    client.connect_to_gui(input_params);
-//    client.run();
+    client.run(input_params);
     return 0;
 }
 // variant [Hello, AcceptedGame, GameStarted, Turn, GameEnded]
