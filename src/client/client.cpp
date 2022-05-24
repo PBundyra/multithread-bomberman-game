@@ -104,16 +104,17 @@ void print_cli(input_params_t &params) {
 // Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
 void Client::gui_to_server_handler() {
     for (int i = 0; i < 10; i++) {
+        if (is_game_started) {
+            cout << "Game started" << endl;
+        } else {
+            cout << "Game not started" << endl;
+        }
         sleep(1);
-        cout << "gui_to_server_handler\n";
     }
 }
 
 void Client::server_to_gui_handler() {
-    for (int i = 0; i < 5; i++) {
-        sleep(2);
-        cout << "server_to_gui_handler\n";
-    }
+    receive_hello();
 }
 
 void Client::parse_events(vector<shared_ptr<Event>> &events) {
@@ -123,53 +124,52 @@ void Client::parse_events(vector<shared_ptr<Event>> &events) {
     // spushuj zmiany
 };
 
-void Client::parse_hello(const char *msg, size_t len) {
-    size_t no_read_el = 0;
-    assert((uint8_t) msg[no_read_el] == 0);
-    no_read_el++;
-    unsigned int name_len = *(uint8_t *) (msg + no_read_el);
-    no_read_el++;
-    cout << "name len: " << name_len << "\n";
-    string server_name;
-    unsigned i = no_read_el;
-    for (; i < no_read_el + name_len; ++i) {
-        server_name += msg[i];
+void Client::parse_hello(const char *msg) {
+    size_t no_read_bytes = 0;
+    assert((uint8_t) msg[no_read_bytes++] == 0);
+    uint8_t server_name_len = *(uint8_t *) (msg + no_read_bytes);
+    buf_server_to_gui.write_into_buffer(server_name_len);
+    no_read_bytes++;
+    unsigned i = no_read_bytes;
+    for (; i < no_read_bytes + server_name_len; ++i) {
+        buf_server_to_gui.write_into_buffer((uint8_t) msg[i]);
     }
-    no_read_el += name_len;
-    cout << "server name: " << server_name << "\n";
-    uint8_t no_players = *(uint8_t *) (msg + no_read_el);
-
-    cout << "no players: " << static_cast<int>(msg[no_read_el]) << "\n";
-    no_read_el += 1;
-    uint16_t size_x = *(uint16_t *) (msg + no_read_el);
-    cout << "size_x: " << be16toh(*(uint16_t *) (msg + no_read_el)) << "\n";
-    no_read_el += 2;
-    uint16_t size_y = *(uint16_t *) (msg + no_read_el);
-    cout << "size_y: " << be16toh(*(uint16_t *) (msg + no_read_el)) << "\n";
-    no_read_el += 2;
-    uint16_t game_length = *(uint16_t *) (msg + no_read_el);
-    cout << "game len: " << be16toh(*(uint16_t *) (msg + no_read_el)) << "\n";
-    no_read_el += 2;
-    cout << "explosion radius: " << be16toh(*(uint16_t *) (msg + no_read_el)) << "\n";
-    no_read_el += 2;
-    cout << "bomb timer: " << be16toh(*(uint16_t *) (msg + no_read_el)) << "\n";
-    this->map = Map(server_name, size_x, size_y, game_length);
+    no_read_bytes += server_name_len;
+    buf_server_to_gui.write_into_buffer(*(uint8_t *) (msg + no_read_bytes));
+    no_read_bytes += 1;
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    no_read_bytes += 2;
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    no_read_bytes += 2;
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    no_read_bytes += 2;
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    no_read_bytes += 2;
+    map = Map(buf_server_to_gui);
 }
 
-void Client::run(input_params_t &params) {
-    size_t received_len = receive_message(tcp_socket_fd, buf_server_to_gui.get_buffer(), MAX_BUFFER_SIZE, 0);
+void Client::receive_hello() {
+    char msg[1024];
+    cout << "RECEIVE tcp socket fd " << tcp_socket_fd << endl;
+    size_t received_len = receive_message(tcp_socket_fd, msg, MAX_BUFFER_SIZE - 1, 0);
+    cout << "msg: " << (int) msg[0] << "\n";
+    cout << "msg: " << (int) msg[1] << "\n";
+    cout << "received hello: " << received_len << "\n";
     if (received_len == 0) {
         cout << "Server closed connection\n";
         exit(0);
     }
-    parse_hello(buf_server_to_gui.get_buffer(), received_len);
+    parse_hello(msg);
+}
+
+void Client::run(input_params_t &params) {
     thread gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
     thread server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
     gui_to_server_thread.join();
     server_to_gui_thread.join();
 }
 
-    // Klient:
+// Klient:
 // - laczy sie z GUI i Serverem
 // - tworzy 2 buffory, mape
 // - odpala 2 watki

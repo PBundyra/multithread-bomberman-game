@@ -16,10 +16,11 @@ using score_t = uint32_t;
 class Map {
 private:
     string server_name;
-    uint16_t size_x;
-    uint16_t size_y;
-    uint16_t game_length;
-    uint16_t turn;
+    uint8_t players_count{};
+    uint16_t size_x{};
+    uint16_t size_y{};
+    uint16_t game_length{};
+    uint16_t turn{};
     unordered_map<player_id_t, shared_ptr<Player>> players;
     unordered_map<player_id_t, shared_ptr<Position>> player_positions;
     vector<shared_ptr<Position>> blocks;
@@ -38,10 +39,20 @@ private:
 public:
     Map() = default;
 
-    Map(const string &server_name, uint16_t size_x, uint16_t size_y, uint16_t game_length) : server_name(server_name), size_x(size_x),
-                                                                size_y(size_y), game_length(game_length) {
-        cout << "Map created" << endl;
+    explicit Map(Buffer &buffer) {
+        uint8_t server_name_length = buffer.read_1_byte();
+        server_name = buffer.read_str(server_name_length);
+        players_count = buffer.read_1_byte();
+        size_x = buffer.read_2_bytes();
+        size_y = buffer.read_2_bytes();
+        game_length = buffer.read_2_bytes();
+
         cout << "Server name: " << server_name << endl;
+        cout << "No players: " << (int)players_count << endl;
+        cout << "Size X: " << size_x << endl;
+        cout << "Size Y: " << size_y << endl;
+        cout << "Game length: " << game_length << endl;
+//        cout << "Explosion length: " <<  << endl;
     };
 
     void apply_changes(const vector<shared_ptr<Event>> &events);

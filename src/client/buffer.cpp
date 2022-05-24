@@ -37,34 +37,36 @@ std::string Buffer::cpy_buffer() {
     return {buffer, no_bytes};
 }
 
-uint8_t Buffer::read_1_bytes() {
+uint8_t Buffer::read_1_byte() {
     uint8_t val;
-    no_bytes -= sizeof(uint8_t);
-    memcpy(&val, buffer + no_bytes, sizeof(uint8_t));
+    memcpy(&val, buffer + no_bytes_read, sizeof(uint8_t));
+    no_bytes_read += sizeof(uint8_t);
     return val;
 }
 
 uint16_t Buffer::read_2_bytes() {
     uint16_t val;
-    no_bytes -= sizeof(uint16_t);
-    memcpy(&val, buffer + no_bytes, sizeof(uint16_t));
+    memcpy(&val, buffer + no_bytes_read, sizeof(uint16_t));
+    no_bytes_read += sizeof(uint16_t);
     return be16toh(val);
 }
 
 uint32_t Buffer::read_4_bytes() {
     uint32_t val;
-    no_bytes -= sizeof(uint32_t);
-    memcpy(&val, buffer + no_bytes, sizeof(uint32_t));
+    memcpy(&val, buffer + no_bytes_read, sizeof(uint32_t));
+    no_bytes_read += sizeof(uint32_t);
     return be32toh(val);
 }
 
 uint64_t Buffer::read_8_bytes() {
     uint64_t val;
-    no_bytes -= sizeof(uint64_t);
-    memcpy(&val, buffer + no_bytes, sizeof(uint64_t));
+    memcpy(&val, buffer + no_bytes_read, sizeof(uint64_t));
+    no_bytes += sizeof(uint64_t);
     return be64toh(val);
 }
 
-std::string Buffer::read_str_from_buffer() {
-    return {buffer, no_bytes};
+std::string Buffer::read_str(const size_t len) {
+    std::string res = {buffer + no_bytes_read, len};
+    no_bytes_read += len;
+    return res;
 }

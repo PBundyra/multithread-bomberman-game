@@ -270,6 +270,10 @@ void Client::server_to_gui_handler() {
         cout << "server_to_gui_handler\n";
 }
 
+void Client::receive_hello() {
+
+}
+
 int main(int argc, char **argv) {
     input_params_t input_params = parse_cli_params(argc, argv);
     Client client = Client(input_params);

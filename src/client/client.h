@@ -74,18 +74,22 @@ private:
 
     void parse_events(vector<shared_ptr<Event>> &events);
 
-    void parse_hello(const char *msg, size_t len);
+    void parse_hello(const char *msg);
 
     void gui_to_server_handler();
 
     void server_to_gui_handler();
 
+    void receive_hello();
+
 public:
     Client(input_params_t &input_params) : name(input_params.player_name) {
         is_game_started = false;
         tcp_socket_fd = open_tcp_socket();
+        cout << "tcp_socket_fd: " << tcp_socket_fd << endl;
         connect_socket(tcp_socket_fd, &input_params.server_addr);
         udp_socket_fd = open_udp_socket();
+//        receive_hello();
     }
 
     ~Client() {

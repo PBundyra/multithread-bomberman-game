@@ -12,9 +12,10 @@ class Buffer {
 private:
     char buffer[MAX_DATAGRAM_SIZE]{};
     size_t no_bytes;
+    size_t no_bytes_read;
 
 public:
-    Buffer() : no_bytes(0) {}
+    Buffer() : no_bytes(0), no_bytes_read(0) {};
 
     char *get_buffer() {
         return buffer;
@@ -34,7 +35,7 @@ public:
 
     std::string cpy_buffer();
 
-    uint8_t read_1_bytes();
+    uint8_t read_1_byte();
 
     uint16_t read_2_bytes();
 
@@ -42,7 +43,7 @@ public:
 
     uint64_t read_8_bytes();
 
-    std::string read_str_from_buffer();
+    std::string read_str(const size_t len);
 };
 
 
