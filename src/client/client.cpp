@@ -25,9 +25,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <utility>
+#include <atomic>
 
 
-//#include "buffer.h"
+#include "buffer.h"
 #include "events.h"
 #include "lobby.h"
 #include "map.h"
@@ -150,93 +151,6 @@ void change_map(unique_ptr<BombExploded> event);
 // Zapisujemy do buffera
 // Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
 
-enum GameState {
-    Lobby,
-    Game,
-};
-
-//
-//class Buffer {
-//private:
-//    friend class Client;
-//
-//    char buffer[MAX_DATAGRAM_SIZE]{};
-//    size_t no_elements;
-//
-//    size_t read_msg(int socket_fd, struct sockaddr_in *client_address) {
-//        auto address_length = (socklen_t)
-//        sizeof(*client_address);
-//        int flags = 0; // we do not request anything special
-//        errno = 0;
-//        ssize_t len = recvfrom(socket_fd, buffer, MAX_DATAGRAM_SIZE, flags,
-//                               (struct sockaddr *) client_address, &address_length);
-//        if (len < 0) {
-//            PRINT_ERRNO();
-//        }
-//        no_elements = len;
-//        return (size_t) len;
-//    }
-//
-//    [[nodiscard]] uint16_t get_msg_size() const { return uint16_t(no_elements); }
-//
-//    msg_id_t get_msg_id() { return (msg_id_t) buffer[0]; }
-//
-//    event_id_t get_event_id() {
-//        assert(get_msg_id() == MsgID::GET_RESERVATION_MSG_ID);
-//        return ntohl(*(uint32_t * )(buffer + sizeof(uint8_t)));
-//    }
-//
-//    ticket_cnt_t get_ticket_cnt() {
-//        assert(get_msg_id() == MsgID::GET_RESERVATION_MSG_ID);
-//        return ntohs(*(uint16_t * )(buffer + sizeof(uint8_t) + sizeof(uint32_t)));
-//    }
-//
-//    reservation_id_t get_reservation_id() {
-//        assert(get_msg_id() == MsgID::GET_TICKET_MSG_ID);
-//        return ntohl(*(uint32_t * )(buffer + sizeof(uint8_t)));
-//    }
-//
-//    string get_cookie() {
-//        assert(get_msg_id() == MsgID::GET_TICKET_MSG_ID);
-//        return {buffer + sizeof(uint8_t) + sizeof(uint32_t), COOKIE_LEN};
-//    }
-//
-//public:
-//    Buffer() : no_elements(0) {}
-//
-//    void write_into_buffer(uint8_t msg) {
-//        auto net_val = msg;
-//        memcpy(buffer + no_elements, &net_val, sizeof(uint8_t));
-//        no_elements += sizeof(uint8_t);
-//    }
-//
-//    void write_into_buffer(uint16_t msg) {
-//        auto net_val = htobe16(msg);
-//        memcpy(buffer + no_elements, &net_val, sizeof(uint16_t));
-//        no_elements += sizeof(uint16_t);
-//    }
-//
-//    void write_into_buffer(uint32_t msg) {
-//        auto net_val = htobe32(msg);
-//        memcpy(buffer + no_elements, &net_val, sizeof(uint32_t));
-//        no_elements += sizeof(uint32_t);
-//    }
-//
-//    void write_into_buffer(uint64_t msg) {
-//        auto net_val = htobe64(msg);
-//        memcpy(buffer + no_elements, &net_val, sizeof(uint64_t));
-//        no_elements += sizeof(uint64_t);
-//    }
-//
-//    void write_str_into_buffer(string &msg) {
-//        memcpy(buffer + no_elements, msg.c_str(), msg.size());
-//        no_elements += msg.size();
-//    }
-//
-//    [[nodiscard]] size_t get_no_elements() const { return no_elements; }
-//
-//    string cpy_buffer() { return {buffer, no_elements}; }
-//};
 static std::string make_daytime_string() {
     using namespace std; // For time_t, time and ctime;
     time_t now = time(0);
