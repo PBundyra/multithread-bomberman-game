@@ -24,7 +24,7 @@ public:
 
     void reset_buffer();
 
-    void print_buffer();
+    void print_buffer(const char * msg, const size_t len);
 
 
 //    std::string cpy_buffer();

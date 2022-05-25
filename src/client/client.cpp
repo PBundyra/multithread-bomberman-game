@@ -80,7 +80,7 @@ void Client::parse_msg_from_gui(const size_t msg_len) {
         buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
         buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
         buf_gui_to_server.write_into_buffer(player_name.c_str(), player_name.size());
-        buf_gui_to_server.print_buffer();
+//        buf_gui_to_server.print_buffer();
     }
 }
 
@@ -97,21 +97,31 @@ void Client::send_msg_to_server() {
 }
 
 void Client::gui_to_server_handler() {
-    while (true) {
+    size_t msg_len;
+    do {
         buf_gui_to_server.reset_buffer();
-        size_t msg_len = get_msg_from_gui();
+        msg_len = get_msg_from_gui();
         parse_msg_from_gui(msg_len);
         send_msg_to_server();
-    }
+    } while (msg_len != 0);
 }
 
 void Client::server_to_gui_handler() {
     receive_hello();
+    size_t msg_len;
+    do {
+        buf_server_to_gui.reset_buffer();
+        msg_len = get_msg_from_server();
+        parse_msg_from_server();
+        send_msg_to_gui();
+    } while (msg_len != 0);
 }
 
-void Client::parse_hello(const char *msg) {
+void Client::parse_hello(const char *msg, const size_t msg_len) {
     size_t no_read_bytes = 0;
-    assert((uint8_t) msg[no_read_bytes++] == 0);
+    ENSURE((uint8_t) msg[no_read_bytes] == 0);
+//    buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
+    no_read_bytes++;
     uint8_t server_name_len = *(uint8_t * )(msg + no_read_bytes);
     buf_server_to_gui.write_into_buffer(server_name_len);
     no_read_bytes++;
@@ -122,31 +132,35 @@ void Client::parse_hello(const char *msg) {
     buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
     no_read_bytes += 1;
     // size x
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
     no_read_bytes += 2;
     // size y
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
     no_read_bytes += 2;
     // game length
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
     no_read_bytes += 2;
     // explosion radius
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
     no_read_bytes += 2;
     // bomb timer
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
+//    buf_server_to_gui.print_buffer(msg, msg_len);
+    cout << "BUFFER\n\n";
+    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
+
     map = Map(buf_server_to_gui);
 }
 
 void Client::receive_hello() {
-    char msg[1024];
+    char msg[BUFFER_SIZE];
     size_t received_len = receive_message_tcp(tcp_socket_fd, msg, MAX_BUFFER_SIZE - 1, 0);
     if (received_len == 0) {
         cout << "Server closed connection\n";
         exit(0);
     }
-    parse_hello(msg);
-    buf_server_to_gui.reset_buffer();
+    parse_hello(msg, received_len);
+    cout << "Parsed hello\n";
 }
 
 void Client::run(input_params_t &params) {

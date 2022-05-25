@@ -18,12 +18,12 @@ void Buffer::reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
 }
 
-void Buffer::print_buffer() {
-    std::cout << "Buffer: " << buffer << std::endl;
-    for (size_t i = 0; i < no_bytes_written; ++i) {
-        std::cout << (int) buffer[i] << " ";
-        std::cout << buffer[i] << " ";
-        std::bitset<8> bs4(buffer[i]);
+void Buffer::print_buffer(const char * msg, const size_t len) {
+    std::cout << "Buffer: " << msg << std::endl;
+    for (size_t i = 0; i < len; ++i) {
+        std::cout << (int) msg[i] << " ";
+        std::cout << msg[i] << " ";
+        std::bitset<8> bs4(msg[i]);
         std::cout << bs4 << " ";
 
         if (i % 6 == 0 && i != 0)
@@ -43,19 +43,19 @@ void Buffer::write_into_buffer(const uint8_t msg) {
 }
 
 void Buffer::write_into_buffer(const uint16_t msg) {
-    auto val = htobe16(msg);
+    auto val = msg;
     memcpy(buffer + no_bytes_written, &val, sizeof(uint16_t));
     no_bytes_written += sizeof(uint16_t);
 }
 
 void Buffer::write_into_buffer(const uint32_t msg) {
-    auto val = htobe32(msg);
+    auto val = msg;
     memcpy(buffer + no_bytes_written, &val, sizeof(uint32_t));
     no_bytes_written += sizeof(uint32_t);
 }
 
 void Buffer::write_into_buffer(const uint64_t msg) {
-    auto val = htobe64(msg);
+    auto val = msg;
     memcpy(buffer + no_bytes_written, &val, sizeof(uint64_t));
     no_bytes_written += sizeof(uint64_t);
 }
@@ -64,7 +64,6 @@ void Buffer::write_into_buffer(const char *msg, const size_t len) {
     for (size_t i = 0; i < len; i++) {
         write_into_buffer((uint8_t) msg[i]);
     }
-    no_bytes_written += len;
 }
 
 
@@ -122,7 +121,7 @@ uint32_t Buffer::read_4_bytes() {
 uint64_t Buffer::read_8_bytes() {
     uint64_t val;
     memcpy(&val, buffer + no_bytes_read, sizeof(uint64_t));
-    no_bytes_written += sizeof(uint64_t);
+    no_bytes_read += sizeof(uint64_t);
     return be64toh(val);
 }
 

@@ -20,6 +20,8 @@ private:
     uint16_t size_x{};
     uint16_t size_y{};
     uint16_t game_length{};
+    uint16_t explosion_radius{};
+    uint16_t bomb_timer{};
     uint16_t turn{};
     unordered_map<player_id_t, shared_ptr<Player>> players;
     unordered_map<player_id_t, shared_ptr<Position>> player_positions;
@@ -46,12 +48,16 @@ public:
         size_x = buffer.read_2_bytes();
         size_y = buffer.read_2_bytes();
         game_length = buffer.read_2_bytes();
+        explosion_radius = buffer.read_2_bytes();
+        bomb_timer = buffer.read_2_bytes();
 
         cout << "Server name: " << server_name << endl;
         cout << "No players: " << (int)players_count << endl;
         cout << "Size X: " << size_x << endl;
         cout << "Size Y: " << size_y << endl;
         cout << "Game length: " << game_length << endl;
+        cout << "Explosion radius: " << explosion_radius << endl;
+        cout << "Bomb timer: " << bomb_timer << endl;
 //        cout << "Explosion length: " <<  << endl;
     };
 

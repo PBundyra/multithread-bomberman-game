@@ -99,7 +99,7 @@ private:
     int tcp_socket_fd;
     int udp_socket_fd;
 
-    void parse_hello(const char *msg);
+    void parse_hello(const char *msg, const size_t msg_len);
 
     size_t get_msg_from_gui();
 

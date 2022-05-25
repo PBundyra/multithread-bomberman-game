@@ -149,7 +149,6 @@ send_message(int socket_fd, const struct sockaddr_in *client_address, const char
 
 inline static size_t receive_message_tcp(int socket_fd, void *buffer, size_t max_length, int flags) {
     errno = 0;
-    std::cout << "RECEIVE HERE\n";
     ssize_t received_length = recv(socket_fd, buffer, max_length, flags);
     if (received_length < 0) {
         PRINT_ERRNO();
