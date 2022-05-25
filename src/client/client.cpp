@@ -94,19 +94,10 @@ input_params_t parse_cli_params(int argc, char **argv) {
 // Zapisujemy do buffera
 // Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
 void Client::gui_to_server_handler() {
-    int count = 0;
     while (true) {
-        count++;
-        if (count < 5) {
-            cout << "HANDLER essa\n";
-        }
         buf_gui_to_server.reset_buffer();
         size_t msg_len = receive_message(udp_socket_fd, &gui_addr, buf_gui_to_server.get_buffer(), BUFFER_SIZE);
-//        ssize_t msg_len = recvfrom(udp_socket_fd, buf_gui_to_server.get_buffer(), MAX_BUFFER_SIZE - 1, 0,
-//                                   (struct sockaddr*) &gui_addr,
-//                                   sizeof(gui_addr));
         cout << "msg len " << msg_len << endl;
-//        cout << "Received message from GUI: " << buf_gui_to_server.get_buffer() << endl;
     }
 }
 
@@ -152,7 +143,7 @@ void Client::parse_hello(const char *msg) {
 
 void Client::receive_hello() {
     char msg[1024];
-    size_t received_len = receive_message(tcp_socket_fd, msg, MAX_BUFFER_SIZE - 1, 0);
+    size_t received_len = receive_message_tcp(tcp_socket_fd, msg, MAX_BUFFER_SIZE - 1, 0);
     if (received_len == 0) {
         cout << "Server closed connection\n";
         exit(0);
