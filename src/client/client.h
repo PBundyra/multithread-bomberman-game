@@ -34,7 +34,7 @@
 #include "buffer.h"
 #include "events.h"
 #include "lobby.h"
-#include "map.h"
+#include "game.h"
 #include "player.h"
 #include "utils.h"
 #include "common.h"
@@ -80,7 +80,6 @@ private:
     using list_len_t = uint32_t;
     using map_len_t = uint32_t;
 
-
     port_t port;
     string player_name;
     port_t gui_port;
@@ -92,31 +91,35 @@ private:
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
-    Map map;
+    Game game;
 //    Lobby lobby;
     atomic_bool is_game_started;
     int tcp_socket_fd;
     int udp_socket_fd;
 
-    size_t read_str(const char *msg);
+    void read_str(Buffer &buf);
 
-    void read_hello();
+//    void read_player(Buffer &buf);
+
+//    void read_event(Buffer &buf);
+
+    void read_hello(Buffer &buf);
 
     void parse_hello(const char *msg, const size_t msg_len);
 
-    void read_accepted_player();
+    void read_accepted_player(Buffer &buf);
 
-    void parse_accepted_player(const char *msg, const size_t msg_len);
+    void parse_accepted_player();
 
-    void read_game_started();
+    void read_game_started(Buffer &buf);
 
     void parse_game_started(const char *msg, const size_t msg_len);
 
-    void read_turn();
+    void read_turn(Buffer &buf);
 
     void parse_turn(const char *msg, const size_t msg_len);
 
-    void read_game_ended();
+    void read_game_ended(Buffer &buf);
 
     void parse_game_ended(const char *msg, const size_t msg_len);
 
@@ -135,8 +138,6 @@ private:
     void gui_to_server_handler();
 
     void server_to_gui_handler();
-
-    void receive_hello();
 
 public:
     Client(input_params_t &input_params) : port(input_params.port), player_name(input_params.player_name),

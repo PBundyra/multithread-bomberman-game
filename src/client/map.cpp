@@ -1,7 +1,7 @@
-//#include "map.h"
+//#include "game.h"
 //
-//void Map::apply_changes(const vector <shared_ptr<Event>> events) {
+//void Game::apply_changes(const vector <shared_ptr<Event>> events) {
 //    for (auto &event: events) {
-//        map.apply_changes(event);
+//        game.apply_changes(event);
 //    }
 //}

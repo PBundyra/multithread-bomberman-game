@@ -211,14 +211,14 @@ enum ServerMessage {
         player: Player,
     },
     [2] GameStarted {
-            players: Map<PlayerId, Player>,
+            players: Game<PlayerId, Player>,
     },
     [3] Turn {
             turn: u16,
             events: List<Event>,
     },
     [4] GameEnded {
-            scores: Map<PlayerId, Score>,
+            scores: Game<PlayerId, Score>,
     },
 }
 ```
@@ -515,7 +515,7 @@ enum DrawMessage {
         game_length: u16,
         explosion_radius: u16,
         bomb_timer: u16,
-        players: Map<PlayerId, Player>
+        players: Game<PlayerId, Player>
     },
     [1] Game {
         server_name: String,
@@ -523,12 +523,12 @@ enum DrawMessage {
         size_y: u16,
         game_length: u16,
         turn: u16,
-        players: Map<PlayerId, Player>,
-        player_positions: Map<PlayerId, Position>,
+        players: Game<PlayerId, Player>,
+        player_positions: Game<PlayerId, Position>,
         blocks: List<Position>,
         bombs: List<Bomb>,
         explosions: List<Position>,
-        scores: Map<PlayerId, Score>,
+        scores: Game<PlayerId, Score>,
     },
 }
 ```

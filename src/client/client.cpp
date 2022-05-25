@@ -14,17 +14,13 @@ using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
-#define MAX_BUFFER_SIZE 1024
 #define JOIN 0
 #define HELLO 0
 #define ACCEPTED_PLAYER 1
 #define GAME_STARTED 2
 #define TURN 3
 #define GAME_ENDED 4
-#define BOMB_PLACED 0
-#define BOMB_EXPLODED 1
-#define PLAYER_MOVED 2
-#define BLOCK_PLACEd 3
+
 
 input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
@@ -158,31 +154,32 @@ void Client::gui_to_server_handler() {
 }
 
 void Client::server_to_gui_handler() {
-//    receive_hello();
-    char buffer[BUFFER_SIZE];
+    char buffer[1];
     size_t msg_len;
     do {
         buf_server_to_gui.reset_buffer();
-        msg_len = get_msg_from_server(buffer, 1);
-        ENSURE(msg_len == 1);
+        msg_len = get_n_bytes_from_server(buffer, 1);
         switch (buffer[0]) {
             case HELLO:
-                read_hello();
                 cout << "Received HELLO" << endl;
+                read_hello(buf_server_to_gui);
                 break;
             case ACCEPTED_PLAYER:
-                read_accepted_player();
                 cout << "Received ACCEPTED_PLAYER" << endl;
+                read_accepted_player(buf_server_to_gui);
                 break;
             case GAME_STARTED:
                 cout << "Received GAME_STARTED" << endl;
+                read_game_started(buf_server_to_gui);
                 is_game_started = true;
                 break;
             case TURN:
                 cout << "Received TURN" << endl;
+                read_turn(buf_server_to_gui);
                 break;
             case GAME_ENDED:
                 cout << "Received GAME_ENDED" << endl;
+                read_game_ended(buf_server_to_gui);
                 is_game_started = false;
                 break;
             default:
@@ -193,17 +190,31 @@ void Client::server_to_gui_handler() {
     } while (msg_len != 0);
 }
 
-size_t Client::read_str(const char *msg) {
-    get_n_bytes_from_server(msg, 1);
-    get_n_bytes_from_server(msg + 1, msg[0]);
-    return msg[0] + 1;
+void Client::read_str(Buffer &buf) {
+    char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, 1);
+    uint8_t str_len = (uint_8_t) buffer[0];
+    buf.write_into_buffer(str_len);
+    get_n_bytes_from_server(buffer, str_len);
+    buf.write_into_buffer(buffer, str_len);
 }
 
-void Client::read_hello() {
-    char buffer[BUFFER_SIZE];
-    size_t msg_len = read_str(buffer);
-    msg_len += get_n_bytes_from_server(buffer + msg_len, 11);
-    parse_hello(buffer, msg_len);
+void Client::read_hello(Buffer &buf) {
+    char buffer[2];
+    read_str(buf);                                  // server name
+    get_n_bytes_from_server(buffer, 1);
+    buf.write_into_buffer(*(uint8_t *) buffer);   // players count
+    get_n_bytes_from_server(buffer, 2);
+    buf.write_into_buffer(*(uint16_t *) buffer);  // size x
+    get_n_bytes_from_server(buffer, 2);
+    buf.write_into_buffer(*(uint16_t *) buffer);  // size y
+    get_n_bytes_from_server(buffer, 2);
+    buf.write_into_buffer(*(uint16_t *) buffer);  // game length
+    get_n_bytes_from_server(buffer, 2);
+    buf.write_into_buffer(*(uint16_t *) buffer);  // explosion radius
+    get_n_bytes_from_server(buffer, 2);
+    buf.write_into_buffer(*(uint16_t *) buffer);  // bomb timer
+    game = Game(buf);
 }
 
 void Client::parse_hello(const char *msg, const size_t msg_len) {
@@ -236,41 +247,59 @@ void Client::parse_hello(const char *msg, const size_t msg_len) {
     buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
 
 //    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
-    map = Map(buf_server_to_gui);
+    game = Game(buf_server_to_gui);
 }
 
-void Client::read_accepted_player() {
+void Client::read_accepted_player(Buffer &buf) {
+    read_player(buf);
+    player_id_t player_id = buf_server_to_gui.read_1_byte();
+    Player player(buf_server_to_gui);
+    game.add_player(player_id, player);
+}
+
+void Client::read_game_started(Buffer &buf) {
     char buffer[BUFFER_SIZE];
-    size_t msg_len = read_str(buffer);
-    msg_len += read_str(buffer + msg_len);
-    parse_accepted_player(buffer, msg_len);
-}
-
-void parse_accepted_player(const char *msg, const size_t msg_len){}
-
-void read_game_started(){}
-
-void parse_game_started(const char *msg, const size_t msg_len){}
-
-void read_turn(){}
-
-void parse_turn(const char *msg, const size_t msg_len){}
-
-void read_game_ended(){}
-
-void parse_game_ended(const char *msg, const size_t msg_len){}
-
-
-void Client::receive_hello() {
-    char msg[BUFFER_SIZE];
-    size_t received_len = receive_message_tcp(tcp_socket_fd, msg, MAX_BUFFER_SIZE - 1, 0);
-    if (received_len == 0) {
-        cout << "Server closed connection\n";
-        exit(0);
+    get_n_bytes_from_server(buffer, 4);
+    uint32_t map_size = *(uint32_t *) buffer;
+    buf.write_into_buffer(map_size);
+    for (uint32_t i = 0; i < map_size; i++) {
+        read_player(buf);
     }
-    parse_hello(msg, received_len);
-    cout << "Parsed hello\n";
+    parse_game_started();
 }
+
+void Client::parse_game_started() {}
+
+void Client::read_turn(Buffer &buf) {
+    char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, 4);
+    uint32_t list_size = *(uint32_t *) buffer;
+    buf.write_into_buffer(list_size);
+    for (uint32_t i = 0; i < list_size; i++) {
+        read_event(buf);
+    }
+    parse_turn();
+}
+
+void Client::parse_turn(const char *msg, const size_t msg_len) {}
+
+void Client::read_game_ended(Buffer &buf) {
+    char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, 4);
+    uint32_t map_size = *(uint32_t *) buffer;
+    buf.write_into_buffer(map_size);
+    for (uint32_t i = 0; i < map_size; i++) {
+        get_n_bytes_from_server(buffer, sizeof(player_id_t));
+        player_id_t player_id = buffer[0];
+        get_n_bytes_from_server(buffer, sizeof(score_t));
+        score_t score = *(score_t *) buffer;
+        // TOOD dodac do mapy
+    }
+    parse_game_started();
+}
+
+void Client::parse_game_ended(const char *msg, const size_t msg_len) {}
+
 
 void Client::run() {
     thread
@@ -280,6 +309,7 @@ void Client::run() {
     gui_to_server_thread.join();
     server_to_gui_thread.join();
 }
+
 
 
 //        while (true) {

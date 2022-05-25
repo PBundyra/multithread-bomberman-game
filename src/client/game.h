@@ -13,7 +13,7 @@ using namespace std;
 
 using score_t = uint32_t;
 
-class Map {
+class Game {
 private:
     string server_name;
     uint8_t players_count{};
@@ -39,9 +39,9 @@ private:
     void apply_changes(unique_ptr<BlockPlaced> event);
 
 public:
-    Map() = default;
+    Game() = default;
 
-    explicit Map(Buffer &buffer) {
+    explicit Game(Buffer &buffer) {
         uint8_t server_name_length = buffer.read_1_byte();
         server_name = buffer.read_n_bytes(server_name_length);
         players_count = buffer.read_1_byte();
@@ -58,7 +58,6 @@ public:
         cout << "Game length: " << game_length << endl;
         cout << "Explosion radius: " << explosion_radius << endl;
         cout << "Bomb timer: " << bomb_timer << endl;
-//        cout << "Explosion length: " <<  << endl;
     };
 
     void apply_changes(const vector<shared_ptr<Event>> &events);
@@ -66,8 +65,6 @@ public:
     void generate_respond(Buffer &buf);
 
     void add_player(player_id_t id, Player &player);
-
-
 };
 
 

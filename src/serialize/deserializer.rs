@@ -386,7 +386,7 @@ impl<'de, 'a, R: Read> MapAccess<'de> for Counted<'a, R> {
         if self.index == self.length {
             return Ok(None);
         }
-        // Deserialize a map key.
+        // Deserialize a game key.
         seed.deserialize(&mut *self.de).map(Some)
     }
 

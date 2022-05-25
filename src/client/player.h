@@ -2,7 +2,7 @@
 #define PLAYER_H
 
 #include <string>
-#include <boost/asio.hpp>
+#include "buffer.h"
 
 namespace asio = boost::asio;
 using namespace std;
@@ -10,10 +10,15 @@ using namespace std;
 class Player {
 private:
     string name;
-    asio::ip::address address;
+    string addr;
 public:
-    Player(string name, asio::ip::address address) : name(name), address(address) {};
+    Player(const Buffer &buf) {
+        name = buf.read_n_bytes((size_t) buf.read_1_byte());
+        addr = buf.read_n_bytes((size_t) buf.read_1_byte());
+    }
 
-};
+}
+
+void read_player(Buffer &buf);
 
 #endif //PLAYER_H
