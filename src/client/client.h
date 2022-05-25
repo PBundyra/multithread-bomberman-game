@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/bind/bind.hpp>
+//#include <boost/bind/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <iostream>
 #include <string.h>
@@ -57,11 +57,38 @@ input_params_t parse_cli_params(int argc, char **argv);
 
 void print_cli(input_params_t &params);
 
+int bind_socket(uint16_t port) {
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0); // creating IPv4 UDP socket
+    ENSURE(socket_fd > 0);
+    // after socket() call; we should close(sock) on any execution path;
+
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET; // IPv4
+    server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
+    server_address.sin_port = htons(port);
+
+    // bind the socket to a concrete address
+    CHECK_ERRNO(bind(socket_fd, (struct sockaddr *) &server_address,
+                     (socklen_t) sizeof(server_address)));
+
+    return socket_fd;
+}
+
 
 class Client {
 private:
     using list_len_t = uint32_t;
     using map_len_t = uint32_t;
+
+
+    port_t port;
+    string player_name;
+    port_t gui_port;
+    string gui_host;
+    port_t server_port;
+    string server_host;
+    struct sockaddr_in server_addr;
+    struct sockaddr_in gui_addr;
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
@@ -83,12 +110,18 @@ private:
     void receive_hello();
 
 public:
-    Client(input_params_t &input_params) : name(input_params.player_name) {
-        is_game_started = false;
+    Client(input_params_t &input_params) : name(input_params.player_name), port(input_params.port),
+                                           gui_port(input_params.gui_port), gui_host(input_params.gui_host),
+                                           server_port(input_params.server_port), server_host(input_params.server_host),
+                                           server_addr(input_params.server_addr), gui_addr(input_params.gui_addr),
+                                           is_game_started(false) {
         tcp_socket_fd = open_tcp_socket();
         cout << "tcp_socket_fd: " << tcp_socket_fd << endl;
         connect_socket(tcp_socket_fd, &input_params.server_addr);
-        udp_socket_fd = open_udp_socket();
+        udp_socket_fd = bind_socket(port);
+//        bind_socket(udp_socket_fd, port);
+
+
 //        receive_hello();
     }
 

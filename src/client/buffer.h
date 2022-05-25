@@ -7,6 +7,7 @@
 #include "err.h"
 
 #define MAX_DATAGRAM_SIZE 65507
+#define BUFFER_SIZE MAX_DATAGRAM_SIZE
 
 class Buffer {
 private:
@@ -17,9 +18,9 @@ private:
 public:
     Buffer() : no_bytes(0), no_bytes_read(0) {};
 
-    char *get_buffer() {
-        return buffer;
-    }
+    char *get_buffer();
+
+    void reset_buffer();
 
     void write_into_buffer(uint8_t msg);
 

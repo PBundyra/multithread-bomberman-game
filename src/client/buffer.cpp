@@ -1,5 +1,15 @@
 #include "buffer.h"
 
+char * Buffer::get_buffer() {
+    return buffer;
+}
+
+void Buffer::reset_buffer() {
+    no_bytes = 0;
+    no_bytes_read = 0;
+    memset(buffer, 0, BUFFER_SIZE);
+}
+
 void Buffer::write_into_buffer(uint8_t msg) {
     auto val = msg;
     memcpy(buffer + no_bytes, &val, sizeof(uint8_t));

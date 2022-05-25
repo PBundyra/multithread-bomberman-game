@@ -16,28 +16,6 @@ using boost::asio::ip::address;
 
 #define MAX_BUFFER_SIZE 1024
 
-struct sockaddr_in get_send_address(const char *host, uint16_t port) {
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET; // IPv4
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = IPPROTO_UDP;
-
-    struct addrinfo *address_result;
-    CHECK(getaddrinfo(host, nullptr, &hints, &address_result));
-
-    struct sockaddr_in send_address;
-    send_address.sin_family = AF_INET; // IPv4
-    send_address.sin_addr.s_addr =
-            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-    send_address.sin_port = htons(port); // port from the command line
-
-    freeaddrinfo(address_result);
-
-    return send_address;
-}
-
-
 input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
     po::options_description desc("Allowed options");
@@ -88,6 +66,25 @@ input_params_t parse_cli_params(int argc, char **argv) {
     return params;
 }
 
+//size_t receive_message(int socket_fd, struct sockaddr_in *receive_address,
+//                       char *buffer, size_t max_length) {
+//    int receive_flags = 0;
+//    socklen_t
+//    address_length = (socklen_t)
+//    sizeof(*receive_address);
+//    errno = 0;
+//    cout << "Waiting for message..." << endl;
+//    ssize_t received_length = recvfrom(socket_fd, buffer, max_length,
+//                                       receive_flags,
+//                                       (struct sockaddr *) receive_address,
+//                                       &address_length);
+//    cout << "Received message" << endl;
+//    if (received_length < 0) {
+//        PRINT_ERRNO();
+//    }
+//    return (size_t) received_length;
+//}
+
 // W petli wykonujemy
 // Dostajesz wiadomosc od servera (dluga) - na poczatku stan całej mapy, a następnie zmiany - dynamicznie tworzymy odpowiednie struktury
 // Po parsowaniu dostajemy wariant
@@ -97,13 +94,19 @@ input_params_t parse_cli_params(int argc, char **argv) {
 // Zapisujemy do buffera
 // Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
 void Client::gui_to_server_handler() {
-    for (int i = 0; i < 10; i++) {
-        if (is_game_started) {
-            cout << "Game started" << endl;
-        } else {
-            cout << "Game not started" << endl;
+    int count = 0;
+    while (true) {
+        count++;
+        if (count < 5) {
+            cout << "HANDLER essa\n";
         }
-        sleep(1);
+        buf_gui_to_server.reset_buffer();
+        size_t msg_len = receive_message(udp_socket_fd, &gui_addr, buf_gui_to_server.get_buffer(), BUFFER_SIZE);
+//        ssize_t msg_len = recvfrom(udp_socket_fd, buf_gui_to_server.get_buffer(), MAX_BUFFER_SIZE - 1, 0,
+//                                   (struct sockaddr*) &gui_addr,
+//                                   sizeof(gui_addr));
+        cout << "msg len " << msg_len << endl;
+//        cout << "Received message from GUI: " << buf_gui_to_server.get_buffer() << endl;
     }
 }
 
@@ -111,7 +114,7 @@ void Client::server_to_gui_handler() {
     receive_hello();
 }
 
-void Client::parse_events(vector<shared_ptr<Event>> &events) {
+void Client::parse_events(vector <shared_ptr<Event>> &events) {
     // w petli
     // odczytaj z buffera
     // stworz kolejny event
@@ -121,29 +124,29 @@ void Client::parse_events(vector<shared_ptr<Event>> &events) {
 void Client::parse_hello(const char *msg) {
     size_t no_read_bytes = 0;
     assert((uint8_t) msg[no_read_bytes++] == 0);
-    uint8_t server_name_len = *(uint8_t *) (msg + no_read_bytes);
+    uint8_t server_name_len = *(uint8_t * )(msg + no_read_bytes);
     buf_server_to_gui.write_into_buffer(server_name_len);
     no_read_bytes++;
     // server name
     buf_server_to_gui.write_str_into_buffer(msg + no_read_bytes, server_name_len);
     no_read_bytes += server_name_len;
     // players count
-    buf_server_to_gui.write_into_buffer(*(uint8_t *) (msg + no_read_bytes));
+    buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
     no_read_bytes += 1;
     // size x
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
     no_read_bytes += 2;
     // size y
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
     no_read_bytes += 2;
     // game length
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
     no_read_bytes += 2;
     // explosion radius
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
     no_read_bytes += 2;
     // bomb timer
-    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t *) (msg + no_read_bytes)));
+    buf_server_to_gui.write_into_buffer(be16toh(*(uint16_t * )(msg + no_read_bytes)));
     map = Map(buf_server_to_gui);
 }
 
@@ -155,13 +158,16 @@ void Client::receive_hello() {
         exit(0);
     }
     parse_hello(msg);
+    buf_server_to_gui.reset_buffer();
 }
 
 void Client::run(input_params_t &params) {
-    thread gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
-    thread server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
+    thread
+    gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
+//    thread
+//    server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
     gui_to_server_thread.join();
-    server_to_gui_thread.join();
+//    server_to_gui_thread.join();
 }
 
 // Klient:
