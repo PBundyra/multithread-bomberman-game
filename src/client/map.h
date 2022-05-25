@@ -41,7 +41,7 @@ public:
 
     explicit Map(Buffer &buffer) {
         uint8_t server_name_length = buffer.read_1_byte();
-        server_name = buffer.read_str(server_name_length);
+        server_name = buffer.read_n_bytes(server_name_length);
         players_count = buffer.read_1_byte();
         size_x = buffer.read_2_bytes();
         size_y = buffer.read_2_bytes();

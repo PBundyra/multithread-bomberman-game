@@ -66,25 +66,6 @@ input_params_t parse_cli_params(int argc, char **argv) {
     return params;
 }
 
-//size_t receive_message(int socket_fd, struct sockaddr_in *receive_address,
-//                       char *buffer, size_t max_length) {
-//    int receive_flags = 0;
-//    socklen_t
-//    address_length = (socklen_t)
-//    sizeof(*receive_address);
-//    errno = 0;
-//    cout << "Waiting for message..." << endl;
-//    ssize_t received_length = recvfrom(socket_fd, buffer, max_length,
-//                                       receive_flags,
-//                                       (struct sockaddr *) receive_address,
-//                                       &address_length);
-//    cout << "Received message" << endl;
-//    if (received_length < 0) {
-//        PRINT_ERRNO();
-//    }
-//    return (size_t) received_length;
-//}
-
 // W petli wykonujemy
 // Dostajesz wiadomosc od servera (dluga) - na poczatku stan całej mapy, a następnie zmiany - dynamicznie tworzymy odpowiednie struktury
 // Po parsowaniu dostajemy wariant
@@ -93,24 +74,33 @@ input_params_t parse_cli_params(int argc, char **argv) {
 // Dostajesz wiadomosc od GUI (krotka) - input gracza - z klawiatury
 // Zapisujemy do buffera
 // Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
+void Client::parse_msg_from_gui(const size_t msg_len) {
+    ENSURE(msg_len == 2 || msg_len == 1);
+    cout << "Received message from GUI of length " << msg_len << endl;
+    if (is_game_started) {
+        uint8_t msg_code = buf_gui_to_server.read_1_byte();
+
+    } else {
+//        send join message
+    }
+}
+
+void Client::send_msg_to_server() {
+
+}
+
 void Client::gui_to_server_handler() {
     while (true) {
         buf_gui_to_server.reset_buffer();
-        size_t msg_len = receive_message(udp_socket_fd, &gui_addr, buf_gui_to_server.get_buffer(), BUFFER_SIZE);
-        cout << "msg len " << msg_len << endl;
+        size_t msg_len = get_msg_from_gui();
+        parse_msg_from_gui(msg_len);
+        send_msg_to_server();
     }
 }
 
 void Client::server_to_gui_handler() {
     receive_hello();
 }
-
-void Client::parse_events(vector <shared_ptr<Event>> &events) {
-    // w petli
-    // odczytaj z buffera
-    // stworz kolejny event
-    // spushuj zmiany
-};
 
 void Client::parse_hello(const char *msg) {
     size_t no_read_bytes = 0;
@@ -119,7 +109,7 @@ void Client::parse_hello(const char *msg) {
     buf_server_to_gui.write_into_buffer(server_name_len);
     no_read_bytes++;
     // server name
-    buf_server_to_gui.write_str_into_buffer(msg + no_read_bytes, server_name_len);
+    buf_server_to_gui.write_into_buffer(msg + no_read_bytes, server_name_len);
     no_read_bytes += server_name_len;
     // players count
     buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
@@ -155,10 +145,54 @@ void Client::receive_hello() {
 void Client::run(input_params_t &params) {
     thread
     gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
-//    thread
-//    server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
+    thread
+    server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
     gui_to_server_thread.join();
-//    server_to_gui_thread.join();
+    server_to_gui_thread.join();
+}
+
+inline static size_t receive_message(int socket_fd, struct sockaddr_in *receive_address,
+                                     char *buffer, size_t max_length) {
+    socklen_t address_length = (socklen_t)
+    sizeof(*receive_address);
+    errno = 0;
+    ssize_t received_length = recvfrom(socket_fd, buffer, max_length,
+                                       0,
+                                       (struct sockaddr *) receive_address,
+                                       &address_length);
+    if (received_length < 0) {
+        PRINT_ERRNO();
+    }
+    return (size_t) received_length;
+}
+
+
+size_t Client::get_msg_from_gui() {
+    socklen_t address_length = (socklen_t)
+    sizeof(gui_addr);
+    errno = 0;
+    ssize_t received_length = recvfrom(udp_socket_fd, buf_server_to_gui.get_buffer(), BUFFER_SIZE,
+                                       0,
+                                       (struct sockaddr *) &gui_addr,
+                                       &address_length);
+    if (received_length < 0) {
+        PRINT_ERRNO();
+    }
+    return (size_t) received_length;
+    //    return receive_message(udp_socket_fd, &gui_addr, buf_gui_to_server.get_buffer(), BUFFER_SIZE);
+
+}
+
+void Client::send_msg_to_gui() {
+
+}
+
+size_t Client::get_msg_from_server() {
+
+}
+
+void Client::parse_msg_from_server() {
+
 }
 
 // Klient:

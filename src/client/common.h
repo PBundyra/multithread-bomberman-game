@@ -158,20 +158,20 @@ inline static size_t receive_message_tcp(int socket_fd, void *buffer, size_t max
     return (size_t) received_length;
 }
 
-inline static size_t receive_message(int socket_fd, struct sockaddr_in *receive_address,
-                       char *buffer, size_t max_length) {
-    socklen_t address_length = (socklen_t)
-    sizeof(*receive_address);
-    errno = 0;
-    ssize_t received_length = recvfrom(socket_fd, buffer, max_length,
-                                       0,
-                                       (struct sockaddr *) receive_address,
-                                       &address_length);
-    if (received_length < 0) {
-        PRINT_ERRNO();
-    }
-    return (size_t) received_length;
-}
+//inline static size_t receive_message(int socket_fd, struct sockaddr_in *receive_address,
+//                       char *buffer, size_t max_length) {
+//    socklen_t address_length = (socklen_t)
+//    sizeof(*receive_address);
+//    errno = 0;
+//    ssize_t received_length = recvfrom(socket_fd, buffer, max_length,
+//                                       0,
+//                                       (struct sockaddr *) receive_address,
+//                                       &address_length);
+//    if (received_length < 0) {
+//        PRINT_ERRNO();
+//    }
+//    return (size_t) received_length;
+//}
 
 
 #endif //MIMUW_SIK_TCP_SOCKETS_COMMON_H

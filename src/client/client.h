@@ -99,9 +99,19 @@ private:
     int tcp_socket_fd;
     int udp_socket_fd;
 
-    void parse_events(vector<shared_ptr<Event>> &events);
-
     void parse_hello(const char *msg);
+
+    size_t get_msg_from_gui();
+
+    void send_msg_to_gui();
+
+    void parse_msg_from_gui(const size_t msg_len);
+
+    size_t get_msg_from_server();
+
+    void send_msg_to_server();
+
+    void parse_msg_from_server();
 
     void gui_to_server_handler();
 

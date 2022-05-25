@@ -12,29 +12,39 @@
 class Buffer {
 private:
     char buffer[MAX_DATAGRAM_SIZE]{};
-    size_t no_bytes;
+    size_t no_bytes_written;
     size_t no_bytes_read;
 
 public:
-    Buffer() : no_bytes(0), no_bytes_read(0) {};
+    Buffer() : no_bytes_written(0), no_bytes_read(0) {};
 
     char *get_buffer();
 
     void reset_buffer();
 
-    void write_into_buffer(uint8_t msg);
+//    [[nodiscard]] size_t get_no_bytes() const;
 
-    void write_into_buffer(uint16_t msg);
+//    std::string cpy_buffer();
 
-    void write_into_buffer(uint32_t msg);
+    void write_into_buffer(const uint8_t msg);
 
-    void write_into_buffer(uint64_t msg);
+    void write_into_buffer(const uint16_t msg);
 
-    void write_str_into_buffer(const char *msg, const size_t len);
+    void write_into_buffer(const uint32_t msg);
 
-    [[nodiscard]] size_t get_no_bytes() const;
+    void write_into_buffer(const uint64_t msg);
 
-    std::string cpy_buffer();
+    void write_into_buffer(const char *msg, const size_t len);
+
+    void overwrite_buffer(const uint8_t msg, const size_t pos);
+
+    void overwrite_buffer(const uint16_t msg, const size_t pos);
+
+    void overwrite_buffer(const uint32_t msg, const size_t pos);
+
+    void overwrite_buffer(const uint64_t msg, const size_t pos);
+
+    void overwrite_buffer(const char *msg, const size_t len, const size_t pos);
 
     uint8_t read_1_byte();
 
@@ -44,7 +54,7 @@ public:
 
     uint64_t read_8_bytes();
 
-    std::string read_str(const size_t len);
+    std::string read_n_bytes(const size_t len);
 };
 
 
