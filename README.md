@@ -524,7 +524,7 @@ enum DrawMessage {
         game_length: u16,
         turn: u16,
         players: Game<PlayerId, Player>,
-        player_positions: Game<PlayerId, Position>,
+        players_positions: Game<PlayerId, Position>,
         blocks: List<Position>,
         bombs: List<Bomb>,
         explosions: List<Position>,
@@ -687,7 +687,7 @@ Innymi słowy, czy wiadomości od GUI mamy odbierać przez receive, czy receive_
 - P: Mam mały problem z gui - roboty się w nim nie wyświetlają. Przesyłam przykład, plansza na której powinien być tylko robot.
   Ostatnia wiadomość otrzymana przez gui:
  ```
- 2022-05-12T14:04:23.246721Z INFO gui: {"Game":{"server_name":"zabawownia","size_x":10,"size_y":10,"game_length":1000,"turn":10,"players":{"0":{"name":"michal","socket_addr":"127.0.0.1:42704"}},"player_positions":{"0":[3,3]},"blocks":[],"bombs":[],"explosions":[],"scores":{}}}
+ 2022-05-12T14:04:23.246721Z INFO gui: {"Game":{"server_name":"zabawownia","size_x":10,"size_y":10,"game_length":1000,"turn":10,"players":{"0":{"name":"michal","socket_addr":"127.0.0.1:42704"}},"players_positions":{"0":[3,3]},"blocks":[],"bombs":[],"explosions":[],"scores":{}}}
  ```
  - O: W scores musi być player.
  - P: Czy klient może połączyć się z serwerem zanim otrzyma wiadomość od gui?

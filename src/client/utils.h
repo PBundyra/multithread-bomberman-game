@@ -15,6 +15,17 @@ struct Position {
     uint16_t y;
 };
 
+struct Bomb {
+    Position pos;
+    uint16_t timer;
+
+    void generate_respond(Buffer &buf) const{
+        buf.write_into_buffer(pos.x);
+        buf.write_into_buffer(pos.y);
+        buf.write_into_buffer(timer);
+    }
+};
+
 //void read_position(Buffer &buf){
 //    char buffer[sizeof(uint16_t)];
 //    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.x

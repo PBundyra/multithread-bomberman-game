@@ -90,9 +90,12 @@ void Client::send_msg_to_gui() {
     socklen_t
             address_length = (socklen_t)
     sizeof(gui_addr);
+    cout << "Sending to GUI"<< endl;
     ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
                                  buf_server_to_gui.get_no_written_bytes(), 0,
                                  (struct sockaddr *) &gui_addr, address_length);
+    cout << "Send " << sent_length << " bytes to GUI" << endl;
+    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), sent_length);
     ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
 }
 
@@ -154,14 +157,21 @@ void Client::server_to_gui_handler() {
     do {
         buf_server_to_gui.reset_buffer();
         msg_len = get_n_bytes_from_server(buffer, 1);
+//        buf_server_to_gui.write_into_buffer((uint8_t) buffer[0]);
         switch (buffer[0]) {
             case HELLO:
                 cout << "Received HELLO" << endl;
                 read_hello(buf_server_to_gui);
+                buf_server_to_gui.reset_buffer();
+                game.generate_lobby_respond(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             case ACCEPTED_PLAYER:
                 cout << "Received ACCEPTED_PLAYER" << endl;
                 read_accepted_player(buf_server_to_gui);
+                buf_server_to_gui.reset_buffer();
+                game.generate_lobby_respond(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             case GAME_STARTED:
                 cout << "Received GAME_STARTED" << endl;
@@ -171,11 +181,17 @@ void Client::server_to_gui_handler() {
             case TURN:
                 cout << "Received TURN" << endl;
                 read_turn(buf_server_to_gui);
+                buf_server_to_gui.reset_buffer();
+                game.generate_game_respond(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             case GAME_ENDED:
                 cout << "Received GAME_ENDED" << endl;
                 read_game_ended(buf_server_to_gui);
                 is_game_started = false;
+                buf_server_to_gui.reset_buffer();
+                game.generate_lobby_respond(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             default:
                 cout << "Received unknown message" << endl;
@@ -188,7 +204,7 @@ void Client::server_to_gui_handler() {
 void Client::read_str(Buffer &buf) {
     char buffer[BUFFER_SIZE];
     get_n_bytes_from_server(buffer, 1);
-    uint8_t str_len = (uint_8_t) buffer[0];
+    auto str_len = (uint8_t) buffer[0];
     buf.write_into_buffer(str_len);
     get_n_bytes_from_server(buffer, str_len);
     buf.write_into_buffer(buffer, str_len);
@@ -197,7 +213,7 @@ void Client::read_str(Buffer &buf) {
 void Client::read_player(Buffer &buf) {
     char buffer[1];
     get_n_bytes_from_server(buffer, 1);
-    buf.write_into_buffer(buffer[0]);                  // player id
+    buf.write_into_buffer((uint8_t) buffer[0]);                  // player id
     read_str(buf);                                  // player name
     read_str(buf);                                  // player address
 }
@@ -288,39 +304,12 @@ void Client::read_hello(Buffer &buf) {
     get_n_bytes_from_server(buffer, 2);
     buf.write_into_buffer(*(uint16_t *) buffer);  // bomb timer
     game = Game(buf);
+    uint32_t map_size = 0;
+    buf.write_into_buffer(map_size);
 }
 
 void Client::parse_hello() {
-    size_t no_read_bytes = 0;
-//    ENSURE((uint8_t) msg[no_read_bytes] == 0);
-//    buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
-//    no_read_bytes++;
-    uint8_t server_name_len = *(uint8_t * )(msg + no_read_bytes);
-    buf_server_to_gui.write_into_buffer(server_name_len);
-    no_read_bytes++;
-    // server name
-    buf_server_to_gui.write_into_buffer(msg + no_read_bytes, server_name_len);
-    no_read_bytes += server_name_len;
-    // players count
-    buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
-    no_read_bytes += 1;
-    // size x
-    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
-    no_read_bytes += 2;
-    // size y
-    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
-    no_read_bytes += 2;
-    // game length
-    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
-    no_read_bytes += 2;
-    // explosion radius
-    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
-    no_read_bytes += 2;
-    // bomb timer
-    buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
-
-//    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
-    game = Game(buf_server_to_gui);
+    send_msg_to_gui();
 }
 
 void Client::read_accepted_player(Buffer &buf) {
@@ -329,8 +318,6 @@ void Client::read_accepted_player(Buffer &buf) {
     Player player(buf_server_to_gui);
     game.add_player(player_id, player);
 }
-
-void Client::parse_accepted_player() {}
 
 void Client::read_game_started(Buffer &buf) {
     char buffer[BUFFER_SIZE];
@@ -374,7 +361,6 @@ void Client::read_game_ended(Buffer &buf) {
 }
 
 void Client::parse_game_ended() {}
-
 
 void Client::run() {
     thread

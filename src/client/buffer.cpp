@@ -32,10 +32,6 @@ void Buffer::print_buffer(const char * msg, const size_t len) {
     std::cout << std::endl;
 }
 
-//std::string Buffer::cpy_buffer() {
-//    return {buffer, no_bytes_written};
-//}
-
 void Buffer::write_into_buffer(const uint8_t msg) {
     auto val = msg;
     memcpy(buffer + no_bytes_written, &val, sizeof(uint8_t));

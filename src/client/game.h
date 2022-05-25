@@ -1,8 +1,10 @@
-#ifndef MAP_H
-#define MAP_H
+#ifndef GAME_H
+#define GAME_H
 
 #include <memory>
 #include <iostream>
+#include <vector>
+#include <unordered_map>
 
 #include "utils.h"
 #include "events.h"
@@ -23,11 +25,11 @@ private:
     uint16_t explosion_radius{};
     uint16_t bomb_timer{};
     uint16_t turn{};
-    unordered_map<player_id_t, shared_ptr<Player>> players;
-    unordered_map<player_id_t, shared_ptr<Position>> player_positions;
-    vector<shared_ptr<Position>> blocks;
-    unordered_map<bomb_id_t, shared_ptr<Position>> bombs;
-    vector<shared_ptr<Position>> explosions;
+    unordered_map<player_id_t, Player> players;
+    unordered_map<player_id_t, Position> players_positions;
+    vector<Position> blocks;
+    unordered_map<bomb_id_t, Bomb> bombs;
+    vector<Position> explosions;
     unordered_map<player_id_t, score_t> scores;
 
     void apply_changes(unique_ptr<BombPlaced> event);
@@ -42,6 +44,7 @@ public:
     Game() = default;
 
     explicit Game(Buffer &buffer) {
+//        buffer.read_1_byte();   // reading HELLO
         uint8_t server_name_length = buffer.read_1_byte();
         server_name = buffer.read_n_bytes(server_name_length);
         players_count = buffer.read_1_byte();
@@ -62,10 +65,12 @@ public:
 
     void apply_changes(const vector<shared_ptr<Event>> &events);
 
-    void generate_respond(Buffer &buf);
+    void generate_lobby_respond(Buffer &buf);
+
+    void generate_game_respond(Buffer &buf);
 
     void add_player(player_id_t id, Player &player);
 };
 
 
-#endif //MAP_H
+#endif //GAME_H

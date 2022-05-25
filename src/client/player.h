@@ -4,7 +4,6 @@
 #include <string>
 #include "buffer.h"
 
-namespace asio = boost::asio;
 using namespace std;
 
 class Player {
@@ -12,12 +11,16 @@ private:
     string name;
     string addr;
 public:
-    Player(const Buffer &buf) {
+    Player(Buffer &buf) {
+        buf.print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
         name = buf.read_n_bytes((size_t) buf.read_1_byte());
         addr = buf.read_n_bytes((size_t) buf.read_1_byte());
+
+        cout << "Created player " << name << " with address " << addr << endl;
     }
 
-}
+    void generate_respond(Buffer &buf);
+};
 
 void read_player(Buffer &buf);
 
