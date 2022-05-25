@@ -15,6 +15,7 @@ using boost::asio::ip::udp;
 using boost::asio::ip::address;
 
 #define MAX_BUFFER_SIZE 1024
+#define JOIN 0
 
 input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
@@ -66,27 +67,33 @@ input_params_t parse_cli_params(int argc, char **argv) {
     return params;
 }
 
-// W petli wykonujemy
-// Dostajesz wiadomosc od servera (dluga) - na poczatku stan całej mapy, a następnie zmiany - dynamicznie tworzymy odpowiednie struktury
-// Po parsowaniu dostajemy wariant
-// Na podstawie tej unii dokonuje zmian w classie Map/Game
-// Wysyla wiadomosc do GUI (dluga) ze stanem mapy
-// Dostajesz wiadomosc od GUI (krotka) - input gracza - z klawiatury
-// Zapisujemy do buffera
-// Wysyła wiadomosc do servera (krotka)  - input gracza - z klawiatury
 void Client::parse_msg_from_gui(const size_t msg_len) {
     ENSURE(msg_len == 2 || msg_len == 1);
     cout << "Received message from GUI of length " << msg_len << endl;
-    if (is_game_started) {
+    if (is_game_started) {  // sends PlaceBomb or PlaceBlock or Move
         uint8_t msg_code = buf_gui_to_server.read_1_byte();
-
-    } else {
-//        send join message
+        cout << "Sending " << (int) (msg_code + 1) << endl;
+        buf_gui_to_server.overwrite_buffer((uint8_t)(msg_code + 1), (size_t) 0);
+    } else {    // sends Join
+        cout << "Sending Join" << endl;
+        buf_gui_to_server.reset_buffer();
+        buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
+        buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
+        buf_gui_to_server.write_into_buffer(player_name.c_str(), player_name.size());
+        buf_gui_to_server.print_buffer();
     }
 }
 
 void Client::send_msg_to_server() {
-
+    cout << "Sending message to server of length " << buf_gui_to_server.get_no_written_bytes() << endl;
+    errno = 0;
+    ssize_t sent_length = send(tcp_socket_fd, buf_gui_to_server.get_buffer(),
+                               buf_gui_to_server.get_no_written_bytes(), 0);
+    if (sent_length < 0) {
+        PRINT_ERRNO();
+    }
+    ENSURE(sent_length == (ssize_t) buf_gui_to_server.get_no_written_bytes());
+    cout << "Sent message to server" << endl;
 }
 
 void Client::gui_to_server_handler() {

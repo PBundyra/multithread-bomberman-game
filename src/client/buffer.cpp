@@ -1,7 +1,15 @@
 #include "buffer.h"
 
-char * Buffer::get_buffer() {
+#include <bitset>
+// TODO remove
+
+
+char *Buffer::get_buffer() {
     return buffer;
+}
+
+size_t Buffer::get_no_written_bytes() const {
+    return no_bytes_written;
 }
 
 void Buffer::reset_buffer() {
@@ -10,9 +18,19 @@ void Buffer::reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
 }
 
-//size_t Buffer::get_no_bytes() const {
-//    return no_bytes_written;
-//}
+void Buffer::print_buffer() {
+    std::cout << "Buffer: " << buffer << std::endl;
+    for (size_t i = 0; i < no_bytes_written; ++i) {
+        std::cout << (int) buffer[i] << " ";
+        std::cout << buffer[i] << " ";
+        std::bitset<8> bs4(buffer[i]);
+        std::cout << bs4 << " ";
+
+        if (i % 6 == 0 && i != 0)
+            std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
 
 //std::string Buffer::cpy_buffer() {
 //    return {buffer, no_bytes_written};

@@ -124,15 +124,11 @@ public:
                                            gui_port(input_params.gui_port), gui_host(input_params.gui_host),
                                            server_port(input_params.server_port), server_host(input_params.server_host),
                                            server_addr(input_params.server_addr), gui_addr(input_params.gui_addr),
-                                           is_game_started(false) {
+                                           player_name(input_params.player_name), is_game_started(false) {
+        cout << "Player " << player_name << " connected to server" << endl;
         tcp_socket_fd = open_tcp_socket();
-        cout << "tcp_socket_fd: " << tcp_socket_fd << endl;
         connect_socket(tcp_socket_fd, &input_params.server_addr);
         udp_socket_fd = bind_socket(port);
-//        bind_socket(udp_socket_fd, port);
-
-
-//        receive_hello();
     }
 
     ~Client() {

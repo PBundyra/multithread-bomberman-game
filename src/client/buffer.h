@@ -20,9 +20,12 @@ public:
 
     char *get_buffer();
 
+    size_t get_no_written_bytes() const;
+
     void reset_buffer();
 
-//    [[nodiscard]] size_t get_no_bytes() const;
+    void print_buffer();
+
 
 //    std::string cpy_buffer();
 

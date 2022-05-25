@@ -12,7 +12,7 @@ buffer: buffer.cpp buffer.h
 
 compile_client: $(client_src).cpp $(client_src).h
 	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o $(client_bin) $(client_src).cpp buffer.cpp -lboost_program_options \
-	&& ./robots-client -p 2137 -s students.mimuw.edu.pl:10100 -d 0.0.0.0:10022 -n essa
+	&& ./robots-client -p 2137 -s 0.0.0.0:10100 -d 0.0.0.0:10022 -n Gigachad
 
 
 compile_server: $(server_src).cpp
