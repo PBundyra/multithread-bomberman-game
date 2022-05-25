@@ -99,13 +99,23 @@ private:
 
     void read_str(Buffer &buf);
 
-//    void read_player(Buffer &buf);
+    void read_player(Buffer &buf);
 
-//    void read_event(Buffer &buf);
+    void read_position(Buffer &buf);
+
+    void read_event(Buffer &buf);
+
+    void read_bomb_placed(Buffer &buf);
+
+    void read_bomb_exploded(Buffer &buf);
+
+    void read_player_moved(Buffer &buf);
+
+    void read_block_placed(Buffer &buf);
 
     void read_hello(Buffer &buf);
 
-    void parse_hello(const char *msg, const size_t msg_len);
+    void parse_hello();
 
     void read_accepted_player(Buffer &buf);
 
@@ -113,15 +123,15 @@ private:
 
     void read_game_started(Buffer &buf);
 
-    void parse_game_started(const char *msg, const size_t msg_len);
+    void parse_game_started();
 
     void read_turn(Buffer &buf);
 
-    void parse_turn(const char *msg, const size_t msg_len);
+    void parse_turn();
 
     void read_game_ended(Buffer &buf);
 
-    void parse_game_ended(const char *msg, const size_t msg_len);
+    void parse_game_ended();
 
     size_t get_msg_from_gui();
 
@@ -132,8 +142,6 @@ private:
     size_t get_n_bytes_from_server(void *buffer, const size_t n);
 
     void send_msg_to_server();
-
-    bool parse_msg_from_server(const char *msg, const size_t msg_len);
 
     void gui_to_server_handler();
 

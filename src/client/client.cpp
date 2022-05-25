@@ -138,11 +138,6 @@ void Client::send_msg_to_server() {
     cout << "Sent message to server" << endl;
 }
 
-bool Client::parse_msg_from_server(const char *msg, const size_t msg_len) {
-    parse_hello(msg, msg_len);
-    return true;
-}
-
 void Client::gui_to_server_handler() {
     size_t msg_len;
     do {
@@ -199,6 +194,84 @@ void Client::read_str(Buffer &buf) {
     buf.write_into_buffer(buffer, str_len);
 }
 
+void Client::read_player(Buffer &buf) {
+    char buffer[1];
+    get_n_bytes_from_server(buffer, 1);
+    buf.write_into_buffer(buffer[0]);                  // player id
+    read_str(buf);                                  // player name
+    read_str(buf);                                  // player address
+}
+
+void Client::read_position(Buffer &buf) {
+    char buffer[sizeof(uint16_t)];
+    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.x
+    buf.write_into_buffer(*(uint16_t *) buffer);
+    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.y
+    buf.write_into_buffer(*(uint16_t *) buffer);
+}
+
+void Client::read_event(Buffer &buf) {
+    char buffer[1];
+    get_n_bytes_from_server(buffer, 1);
+    uint8_t event_id = (uint8_t) buffer[0];
+    buf.write_into_buffer(event_id);
+    switch (event_id) {
+        case BOMB_PLACED:
+            read_bomb_placed(buf);
+            break;
+        case BOMB_EXPLODED:
+            read_bomb_exploded(buf);
+            break;
+        case PLAYER_MOVED:
+            read_player_moved(buf);
+            break;
+        case BLOCK_PLACED:
+            read_block_placed(buf);
+            break;
+        default:
+            cout << "Received unknown event" << endl;
+            // TODO handle unknown event
+            break;
+    }
+}
+
+void Client::read_bomb_placed(Buffer &buf) {
+    char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, sizeof(bomb_id_t));
+    buf.write_into_buffer(*(bomb_id_t *) buffer);
+    read_position(buf);
+}
+
+void Client::read_bomb_exploded(Buffer &buf) {
+    char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, sizeof(bomb_id_t));
+    buf.write_into_buffer(*(bomb_id_t *) buffer);
+    get_n_bytes_from_server(buffer, sizeof(uint32_t));  // list of destroyed robots
+    uint32_t list_size = *(uint32_t *) buffer;
+    buf.write_into_buffer(list_size);
+    for (uint32_t i = 0; i < list_size; i++) {
+        get_n_bytes_from_server(buffer, sizeof(player_id_t));
+        buf.write_into_buffer(*(player_id_t *) buffer);
+    }
+    get_n_bytes_from_server(buffer, sizeof(uint32_t));  // list of destroyed blocks
+    list_size = *(uint32_t *) buffer;
+    buf.write_into_buffer(list_size);
+    for (uint32_t i = 0; i < list_size; i++) {
+        read_position(buf);
+    }
+}
+
+void Client::read_player_moved(Buffer &buf) {
+    char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, sizeof(player_id_t));
+    buf.write_into_buffer(*(player_id_t *) buffer);
+    read_position(buf);
+}
+
+void Client::read_block_placed(Buffer &buf) {
+    read_position(buf);
+}
+
 void Client::read_hello(Buffer &buf) {
     char buffer[2];
     read_str(buf);                                  // server name
@@ -217,7 +290,7 @@ void Client::read_hello(Buffer &buf) {
     game = Game(buf);
 }
 
-void Client::parse_hello(const char *msg, const size_t msg_len) {
+void Client::parse_hello() {
     size_t no_read_bytes = 0;
 //    ENSURE((uint8_t) msg[no_read_bytes] == 0);
 //    buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
@@ -257,6 +330,8 @@ void Client::read_accepted_player(Buffer &buf) {
     game.add_player(player_id, player);
 }
 
+void Client::parse_accepted_player() {}
+
 void Client::read_game_started(Buffer &buf) {
     char buffer[BUFFER_SIZE];
     get_n_bytes_from_server(buffer, 4);
@@ -281,7 +356,7 @@ void Client::read_turn(Buffer &buf) {
     parse_turn();
 }
 
-void Client::parse_turn(const char *msg, const size_t msg_len) {}
+void Client::parse_turn() {}
 
 void Client::read_game_ended(Buffer &buf) {
     char buffer[BUFFER_SIZE];
@@ -298,7 +373,7 @@ void Client::read_game_ended(Buffer &buf) {
     parse_game_started();
 }
 
-void Client::parse_game_ended(const char *msg, const size_t msg_len) {}
+void Client::parse_game_ended() {}
 
 
 void Client::run() {
@@ -309,20 +384,6 @@ void Client::run() {
     gui_to_server_thread.join();
     server_to_gui_thread.join();
 }
-
-
-
-//        while (true) {
-// niezaleznie od stanu jesli dostajemy komunikat od serwera go obłusgujemy
-// jesli komunikat to AcceptedPlayer/Turn to wysylami zmiany do GUI
-// jesli dostales komunikat GameStarted to trzeba zmienic stan na Game
-// jesli dostales komunikat GameEnded to trzeba zmienic stan na Lobby
-
-//            if (state == GameState::Lobby) {
-// wszystkie komunikaty od gui leca do serwera jako Join
-//            } else {
-// wszystkie komunikaty od gui leca tak jak przyszly
-//            }
 
 int main(int argc, char **argv) {
     input_params_t input_params = parse_cli_params(argc, argv);

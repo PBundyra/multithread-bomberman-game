@@ -11,9 +11,9 @@
 
 using player_id_t = uint8_t;
 using bomb_id_t = uint32_t;
-
-void read_event(Buffer &buf);
-
+//
+//void read_event(Buffer &buf);
+//
 //void read_bomb_placed(Buffer &buf);
 //
 //void read_bomb_exploded(Buffer &buf);
