@@ -95,11 +95,30 @@ private:
     Map map;
 //    Lobby lobby;
     atomic_bool is_game_started;
-    string name;
     int tcp_socket_fd;
     int udp_socket_fd;
 
+    size_t read_str(const char *msg);
+
+    void read_hello();
+
     void parse_hello(const char *msg, const size_t msg_len);
+
+    void read_accepted_player();
+
+    void parse_accepted_player(const char *msg, const size_t msg_len);
+
+    void read_game_started();
+
+    void parse_game_started(const char *msg, const size_t msg_len);
+
+    void read_turn();
+
+    void parse_turn(const char *msg, const size_t msg_len);
+
+    void read_game_ended();
+
+    void parse_game_ended(const char *msg, const size_t msg_len);
 
     size_t get_msg_from_gui();
 
@@ -107,11 +126,11 @@ private:
 
     void parse_msg_from_gui(const size_t msg_len);
 
-    size_t get_msg_from_server();
+    size_t get_n_bytes_from_server(void *buffer, const size_t n);
 
     void send_msg_to_server();
 
-    void parse_msg_from_server();
+    bool parse_msg_from_server(const char *msg, const size_t msg_len);
 
     void gui_to_server_handler();
 
@@ -120,15 +139,16 @@ private:
     void receive_hello();
 
 public:
-    Client(input_params_t &input_params) : name(input_params.player_name), port(input_params.port),
+    Client(input_params_t &input_params) : port(input_params.port), player_name(input_params.player_name),
                                            gui_port(input_params.gui_port), gui_host(input_params.gui_host),
                                            server_port(input_params.server_port), server_host(input_params.server_host),
                                            server_addr(input_params.server_addr), gui_addr(input_params.gui_addr),
-                                           player_name(input_params.player_name), is_game_started(false) {
-        cout << "Player " << player_name << " connected to server" << endl;
+                                           is_game_started(false) {
         tcp_socket_fd = open_tcp_socket();
         connect_socket(tcp_socket_fd, &input_params.server_addr);
+        cout << "Connected to server" << endl;
         udp_socket_fd = bind_socket(port);
+        cout << "Connected to GUI" << endl;
     }
 
     ~Client() {
@@ -136,7 +156,7 @@ public:
         close(udp_socket_fd);
     }
 
-    void run(input_params_t &params);
+    void run();
 };
 
 #endif //CLIENT_H

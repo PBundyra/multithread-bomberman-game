@@ -16,6 +16,15 @@ using boost::asio::ip::address;
 
 #define MAX_BUFFER_SIZE 1024
 #define JOIN 0
+#define HELLO 0
+#define ACCEPTED_PLAYER 1
+#define GAME_STARTED 2
+#define TURN 3
+#define GAME_ENDED 4
+#define BOMB_PLACED 0
+#define BOMB_EXPLODED 1
+#define PLAYER_MOVED 2
+#define BLOCK_PLACEd 3
 
 input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
@@ -67,6 +76,30 @@ input_params_t parse_cli_params(int argc, char **argv) {
     return params;
 }
 
+size_t Client::get_msg_from_gui() {
+    socklen_t address_length = (socklen_t)
+    sizeof(gui_addr);
+    errno = 0;
+    ssize_t received_length = recvfrom(udp_socket_fd, buf_server_to_gui.get_buffer(), BUFFER_SIZE,
+                                       0,
+                                       (struct sockaddr *) &gui_addr,
+                                       &address_length);
+    if (received_length < 0) {
+        PRINT_ERRNO();
+    }
+    return (size_t) received_length;
+}
+
+void Client::send_msg_to_gui() {
+    socklen_t
+            address_length = (socklen_t)
+    sizeof(gui_addr);
+    ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
+                                 buf_server_to_gui.get_no_written_bytes(), 0,
+                                 (struct sockaddr *) &gui_addr, address_length);
+    ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
+}
+
 void Client::parse_msg_from_gui(const size_t msg_len) {
     ENSURE(msg_len == 2 || msg_len == 1);
     cout << "Received message from GUI of length " << msg_len << endl;
@@ -84,6 +117,19 @@ void Client::parse_msg_from_gui(const size_t msg_len) {
     }
 }
 
+size_t Client::get_n_bytes_from_server(void *buffer, const size_t n) {
+    errno = 0;
+    ssize_t received_length = recv(tcp_socket_fd, buffer, n, MSG_WAITALL);
+    if (received_length < 0) {
+        PRINT_ERRNO();
+    } else if (received_length == 0) {
+        cout << "Server closed connection" << endl;
+        exit(0);
+    }
+    std::cout << "Received message from server of length: " << received_length << "\n";
+    return (size_t) received_length;
+}
+
 void Client::send_msg_to_server() {
     cout << "Sending message to server of length " << buf_gui_to_server.get_no_written_bytes() << endl;
     errno = 0;
@@ -94,6 +140,11 @@ void Client::send_msg_to_server() {
     }
     ENSURE(sent_length == (ssize_t) buf_gui_to_server.get_no_written_bytes());
     cout << "Sent message to server" << endl;
+}
+
+bool Client::parse_msg_from_server(const char *msg, const size_t msg_len) {
+    parse_hello(msg, msg_len);
+    return true;
 }
 
 void Client::gui_to_server_handler() {
@@ -107,21 +158,59 @@ void Client::gui_to_server_handler() {
 }
 
 void Client::server_to_gui_handler() {
-    receive_hello();
+//    receive_hello();
+    char buffer[BUFFER_SIZE];
     size_t msg_len;
     do {
         buf_server_to_gui.reset_buffer();
-        msg_len = get_msg_from_server();
-        parse_msg_from_server();
-        send_msg_to_gui();
+        msg_len = get_msg_from_server(buffer, 1);
+        ENSURE(msg_len == 1);
+        switch (buffer[0]) {
+            case HELLO:
+                read_hello();
+                cout << "Received HELLO" << endl;
+                break;
+            case ACCEPTED_PLAYER:
+                read_accepted_player();
+                cout << "Received ACCEPTED_PLAYER" << endl;
+                break;
+            case GAME_STARTED:
+                cout << "Received GAME_STARTED" << endl;
+                is_game_started = true;
+                break;
+            case TURN:
+                cout << "Received TURN" << endl;
+                break;
+            case GAME_ENDED:
+                cout << "Received GAME_ENDED" << endl;
+                is_game_started = false;
+                break;
+            default:
+                cout << "Received unknown message" << endl;
+                // TODO handle unknown message
+                break;
+        }
     } while (msg_len != 0);
+}
+
+size_t Client::read_str(const char *msg) {
+    get_n_bytes_from_server(msg, 1);
+    get_n_bytes_from_server(msg + 1, msg[0]);
+    return msg[0] + 1;
+}
+
+void Client::read_hello() {
+    char buffer[BUFFER_SIZE];
+    size_t msg_len = read_str(buffer);
+    msg_len += get_n_bytes_from_server(buffer + msg_len, 11);
+    parse_hello(buffer, msg_len);
 }
 
 void Client::parse_hello(const char *msg, const size_t msg_len) {
     size_t no_read_bytes = 0;
-    ENSURE((uint8_t) msg[no_read_bytes] == 0);
+//    ENSURE((uint8_t) msg[no_read_bytes] == 0);
 //    buf_server_to_gui.write_into_buffer(*(uint8_t * )(msg + no_read_bytes));
-    no_read_bytes++;
+//    no_read_bytes++;
     uint8_t server_name_len = *(uint8_t * )(msg + no_read_bytes);
     buf_server_to_gui.write_into_buffer(server_name_len);
     no_read_bytes++;
@@ -145,12 +234,32 @@ void Client::parse_hello(const char *msg, const size_t msg_len) {
     no_read_bytes += 2;
     // bomb timer
     buf_server_to_gui.write_into_buffer(*(uint16_t * )(msg + no_read_bytes));
-//    buf_server_to_gui.print_buffer(msg, msg_len);
-    cout << "BUFFER\n\n";
-    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
 
+//    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
     map = Map(buf_server_to_gui);
 }
+
+void Client::read_accepted_player() {
+    char buffer[BUFFER_SIZE];
+    size_t msg_len = read_str(buffer);
+    msg_len += read_str(buffer + msg_len);
+    parse_accepted_player(buffer, msg_len);
+}
+
+void parse_accepted_player(const char *msg, const size_t msg_len){}
+
+void read_game_started(){}
+
+void parse_game_started(const char *msg, const size_t msg_len){}
+
+void read_turn(){}
+
+void parse_turn(const char *msg, const size_t msg_len){}
+
+void read_game_ended(){}
+
+void parse_game_ended(const char *msg, const size_t msg_len){}
+
 
 void Client::receive_hello() {
     char msg[BUFFER_SIZE];
@@ -163,7 +272,7 @@ void Client::receive_hello() {
     cout << "Parsed hello\n";
 }
 
-void Client::run(input_params_t &params) {
+void Client::run() {
     thread
     gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
     thread
@@ -171,57 +280,6 @@ void Client::run(input_params_t &params) {
     gui_to_server_thread.join();
     server_to_gui_thread.join();
 }
-
-inline static size_t receive_message(int socket_fd, struct sockaddr_in *receive_address,
-                                     char *buffer, size_t max_length) {
-    socklen_t address_length = (socklen_t)
-    sizeof(*receive_address);
-    errno = 0;
-    ssize_t received_length = recvfrom(socket_fd, buffer, max_length,
-                                       0,
-                                       (struct sockaddr *) receive_address,
-                                       &address_length);
-    if (received_length < 0) {
-        PRINT_ERRNO();
-    }
-    return (size_t) received_length;
-}
-
-
-size_t Client::get_msg_from_gui() {
-    socklen_t address_length = (socklen_t)
-    sizeof(gui_addr);
-    errno = 0;
-    ssize_t received_length = recvfrom(udp_socket_fd, buf_server_to_gui.get_buffer(), BUFFER_SIZE,
-                                       0,
-                                       (struct sockaddr *) &gui_addr,
-                                       &address_length);
-    if (received_length < 0) {
-        PRINT_ERRNO();
-    }
-    return (size_t) received_length;
-    //    return receive_message(udp_socket_fd, &gui_addr, buf_gui_to_server.get_buffer(), BUFFER_SIZE);
-
-}
-
-void Client::send_msg_to_gui() {
-
-}
-
-size_t Client::get_msg_from_server() {
-
-}
-
-void Client::parse_msg_from_server() {
-
-}
-
-// Klient:
-// - laczy sie z GUI i Serverem
-// - tworzy 2 buffory, mape
-// - odpala 2 watki
-// - pierwszy watek przesyla wiadomosci z GUI do Servera
-// - drugi watek przesyla wiadomosci z Servera do GUI
 
 
 //        while (true) {
@@ -239,6 +297,6 @@ void Client::parse_msg_from_server() {
 int main(int argc, char **argv) {
     input_params_t input_params = parse_cli_params(argc, argv);
     Client client = Client(input_params);
-    client.run(input_params);
+    client.run();
     return 0;
 }
