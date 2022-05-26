@@ -16,6 +16,7 @@ public:
         addr = buf.read_n_bytes((size_t) buf.read_1_byte());
         cout << "Created player " << name << " with address " << addr << endl;
     }
+
     void generate_respond(Buffer &buf);
 };
 

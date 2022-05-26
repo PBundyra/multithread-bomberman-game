@@ -5,10 +5,9 @@
 #include <boost/asio.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/lexical_cast.hpp>
-//#include <boost/bind/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 #include <limits>
 #include <iostream>
 #include <sstream>
@@ -55,8 +54,6 @@ typedef struct input_params_t {
 
 input_params_t parse_cli_params(int argc, char **argv);
 
-void print_cli(input_params_t &params);
-
 int bind_socket(uint16_t port) {
     int socket_fd = socket(AF_INET, SOCK_DGRAM, 0); // creating IPv4 UDP socket
     ENSURE(socket_fd > 0);
@@ -92,7 +89,6 @@ private:
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
     Game game;
-//    Lobby lobby;
     atomic_bool is_game_started;
     int tcp_socket_fd;
     int udp_socket_fd;
@@ -115,33 +111,23 @@ private:
 
     void read_hello(Buffer &buf);
 
-    void parse_hello();
-
     void read_accepted_player(Buffer &buf);
-
-    void parse_accepted_player();
 
     void read_game_started(Buffer &buf);
 
-    void parse_game_started();
-
     void read_turn(Buffer &buf);
 
-    void parse_turn();
-
     void read_game_ended(Buffer &buf);
-
-    void parse_game_ended();
 
     size_t get_msg_from_gui();
 
     void send_msg_to_gui();
 
-    void parse_msg_from_gui(const size_t msg_len);
+    void parse_msg_from_gui(size_t msg_len);
 
-    size_t get_n_bytes_from_server(void *buffer, const size_t n);
+    size_t get_n_bytes_from_server(void *buffer, size_t n) const;
 
-    void send_msg_to_server();
+    void send_msg_to_server(size_t msg_len);
 
     void gui_to_server_handler();
 

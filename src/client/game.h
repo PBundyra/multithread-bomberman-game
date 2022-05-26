@@ -64,15 +64,11 @@ public:
         cout << "Bomb timer: " << bomb_timer << endl;
     };
 
-    void apply_changes(const vector<shared_ptr<Event>> &events);
-
     void generate_lobby_respond(Buffer &buf);
 
     void generate_game_respond(Buffer &buf);
 
     void add_player(player_id_t id, Player &player);
-
-    void game_started(Buffer &buf);
 
     void move_player(Buffer &buf);
 
@@ -81,6 +77,8 @@ public:
     void place_bomb(Buffer &buf);
 
     void explode_bomb(Buffer &buf);
+
+    void reset_game();
 };
 
 

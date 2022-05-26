@@ -3,6 +3,7 @@
 
 #include "buffer.h"
 #include "utils.h"
+#include "game.h"
 
 #define BOMB_PLACED 0
 #define BOMB_EXPLODED 1
@@ -11,36 +12,18 @@
 
 using player_id_t = uint8_t;
 using bomb_id_t = uint32_t;
-//
-//void read_event(Buffer &buf);
-//
-//void read_bomb_placed(Buffer &buf);
-//
-//void read_bomb_exploded(Buffer &buf);
-//
-//void read_player_moved(Buffer &buf);
-//
-//void read_block_placed(Buffer &buf);
 
+void read_position(int socket_fd, Buffer &buf);
 
-class Event {
-private:
+void read_event(int socket_fd, Buffer &buf);
 
-};
+void read_bomb_placed(int socket_fd, Buffer &buf);
 
-class BombPlaced : public Event {
-private:
-    bomb_id_t id;
-};
+void read_bomb_exploded(int socket_fd, Buffer &buf);
 
-class BombExploded : public Event {
-};
+void read_player_moved(int socket_fd, Buffer &buf);
 
-class PlayerMoved : public Event {
-};
-
-class BlockPlaced : public Event {
-};
+void read_block_placed(int socket_fd, Buffer &buf);
 
 
 #endif //EVENTS_H

@@ -39,6 +39,7 @@ impl ser::Error for DeserError {
 
 impl de::Error for DeserError {
     fn custom<T: Display>(msg: T) -> Self {
+        println!("{}", msg.to_string());
         DeserError::Decoding(msg.to_string())
     }
 }

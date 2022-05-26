@@ -23,12 +23,14 @@ struct Bomb {
 
     Bomb(Position pos, uint16_t timer) : pos(pos), timer(timer) {};
 
-    void generate_respond(Buffer &buf) const{
+    void generate_respond(Buffer &buf) const {
         buf.write_into_buffer(pos.x);
         buf.write_into_buffer(pos.y);
         buf.write_into_buffer(timer);
     }
 };
+
+size_t get_n_bytes_from_server(int socket_fd, void *buffer, const size_t n);
 
 //void read_position(Buffer &buf){
 //    char buffer[sizeof(uint16_t)];
