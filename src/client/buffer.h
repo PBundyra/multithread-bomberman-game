@@ -3,7 +3,7 @@
 
 #include <string>
 #include <iostream>
-#include "common.h"
+#include <cstring>
 #include "err.h"
 
 #define MAX_DATAGRAM_SIZE 65507
@@ -20,34 +20,31 @@ public:
 
     char *get_buffer();
 
-    size_t get_no_written_bytes() const;
+    [[nodiscard]] size_t get_no_written_bytes() const;
 
     void reset_buffer();
 
-    void print_buffer(const char * msg, const size_t len);
+    static void print_buffer(const char *msg, size_t len);
 
+    void write_into_buffer(uint8_t msg);
 
-//    std::string cpy_buffer();
+    void write_into_buffer(uint16_t msg);
 
-    void write_into_buffer(const uint8_t msg);
+    void write_into_buffer(uint32_t msg);
 
-    void write_into_buffer(const uint16_t msg);
+    void write_into_buffer(uint64_t msg);
 
-    void write_into_buffer(const uint32_t msg);
+    void write_into_buffer(const char *msg, size_t len);
 
-    void write_into_buffer(const uint64_t msg);
+    void overwrite_buffer(uint8_t msg, size_t pos);
 
-    void write_into_buffer(const char *msg, const size_t len);
+    void overwrite_buffer(uint16_t msg, size_t pos);
 
-    void overwrite_buffer(const uint8_t msg, const size_t pos);
+    void overwrite_buffer(uint32_t msg, size_t pos);
 
-    void overwrite_buffer(const uint16_t msg, const size_t pos);
+    void overwrite_buffer(uint64_t msg, size_t pos);
 
-    void overwrite_buffer(const uint32_t msg, const size_t pos);
-
-    void overwrite_buffer(const uint64_t msg, const size_t pos);
-
-    void overwrite_buffer(const char *msg, const size_t len, const size_t pos);
+    void overwrite_buffer(const char *msg, size_t len, size_t pos);
 
     uint8_t read_1_byte();
 
@@ -57,8 +54,7 @@ public:
 
     uint64_t read_8_bytes();
 
-    std::string read_n_bytes(const size_t len);
+    std::string read_n_bytes(size_t len);
 };
-
 
 #endif //BUFFER_H

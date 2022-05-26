@@ -45,14 +45,14 @@ void Game::generate_game_respond(Buffer &buf) {
     buf.write_into_buffer(htobe32(players_positions_map_size));
     for (auto &player: players_positions) {
         buf.write_into_buffer(player.first);
-        buf.write_into_buffer(htobe16(player.second.x));
-        buf.write_into_buffer(htobe16(player.second.y));
+        buf.write_into_buffer(htobe16(player.second.first));
+        buf.write_into_buffer(htobe16(player.second.second));
     }
     auto blocks_list_size = (uint32_t) blocks.size();
     buf.write_into_buffer(htobe32(blocks_list_size));
     for (auto &position: blocks) {
-        buf.write_into_buffer(htobe16(position.x));
-        buf.write_into_buffer(htobe16(position.y));
+        buf.write_into_buffer(htobe16(position.first));
+        buf.write_into_buffer(htobe16(position.second));
     }
     auto bombs_list_size = (uint32_t) bombs.size();
     buf.write_into_buffer(htobe32(bombs_list_size));
@@ -62,8 +62,8 @@ void Game::generate_game_respond(Buffer &buf) {
     auto explosions_list_size = (uint32_t) explosions.size();
     buf.write_into_buffer(htobe32(explosions_list_size));
     for (auto &position: explosions) {
-        buf.write_into_buffer(htobe16(position.x));
-        buf.write_into_buffer(htobe16(position.y));
+        buf.write_into_buffer(htobe16(position.first));
+        buf.write_into_buffer(htobe16(position.second));
     }
     auto scores_map_size = (uint32_t) scores.size();
     buf.write_into_buffer(htobe32(scores_map_size));
@@ -86,7 +86,7 @@ void Game::move_player(Buffer &buf) {
 void Game::place_block(Buffer &buf) {
     uint16_t x = be16toh(buf.read_2_bytes());
     uint16_t y = be16toh(buf.read_2_bytes());
-    blocks.emplace_back(x, y);
+    blocks.insert(Position(x, y));
 }
 
 void Game::place_bomb(Buffer &buf) {
@@ -99,6 +99,21 @@ void Game::explode_bomb(Buffer &buf) {
 
 void Game::reset_game() {
 
+}
+
+void Game::destroy_block(Buffer &buf) {
+    uint16_t x = be16toh(buf.read_2_bytes());
+    uint16_t y = be16toh(buf.read_2_bytes());
+}
+
+void Game::set_turn(turn_t new_turn) {
+    this->turn = new_turn;
+}
+
+void Bomb::generate_respond(Buffer &buf) const {
+    buf.write_into_buffer(pos.first);
+    buf.write_into_buffer(pos.second);
+    buf.write_into_buffer(timer);
 }
 
 //TODO restartowac mape po gameended

@@ -1,7 +1,17 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <sys/syscall.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+
 #include "buffer.h"
+#include "err.h"
+
+using list_len_t = uint32_t;
+using map_len_t = uint32_t;
+using port_t = uint16_t;
 
 enum Direction {
     UP,
@@ -10,35 +20,21 @@ enum Direction {
     RIGHT
 };
 
-struct Position {
-    uint16_t x;
-    uint16_t y;
+using Position = std::pair<uint16_t, uint16_t>;
 
-    Position(uint16_t x, uint16_t y) : x(x), y(y) {};
-};
+//struct Position {
+//    uint16_t x;
+//    uint16_t y;
+//
+//    Position(uint16_t x, uint16_t y) : x(x), y(y) {};
+//};
 
-struct Bomb {
-    Position pos;
-    uint16_t timer;
 
-    Bomb(Position pos, uint16_t timer) : pos(pos), timer(timer) {};
+size_t get_n_bytes_from_server(int socket_fd, void *buffer, size_t n);
 
-    void generate_respond(Buffer &buf) const {
-        buf.write_into_buffer(pos.x);
-        buf.write_into_buffer(pos.y);
-        buf.write_into_buffer(timer);
-    }
-};
+int bind_socket(port_t port);
 
-size_t get_n_bytes_from_server(int socket_fd, void *buffer, const size_t n);
-
-//void read_position(Buffer &buf){
-//    char buffer[sizeof(uint16_t)];
-//    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.x
-//    buf.write_into_buffer(*(uint16_t *) buffer);
-//    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.y
-//    buf.write_into_buffer(*(uint16_t *) buffer);
-//}
+void read_str(int socket_fd, Buffer &buf);
 
 
 #endif //UTILS_H

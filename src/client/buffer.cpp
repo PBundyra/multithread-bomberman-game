@@ -3,7 +3,6 @@
 #include <bitset>
 // TODO remove
 
-
 char *Buffer::get_buffer() {
     return buffer;
 }

@@ -201,103 +201,9 @@ void Client::server_to_gui_handler() {
     } while (msg_len != 0);
 }
 
-void Client::read_str(Buffer &buf) {
-    char buffer[BUFFER_SIZE];
-    get_n_bytes_from_server(buffer, 1);
-    auto str_len = (uint8_t) buffer[0];
-    buf.write_into_buffer(str_len);
-    get_n_bytes_from_server(buffer, str_len);
-    buf.write_into_buffer(buffer, str_len);
-}
-
-void Client::read_player(Buffer &buf) {
-    char buffer[1];
-    get_n_bytes_from_server(buffer, 1);
-    buf.write_into_buffer((uint8_t) buffer[0]);                  // player id
-    read_str(buf);                                  // player name
-    read_str(buf);                                  // player address
-}
-
-//void Client::read_position(Buffer &buf) {
-//    char buffer[sizeof(uint16_t)];
-//    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.x
-//    buf.write_into_buffer(be16toh(*(uint16_t *) buffer));
-//    get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.y
-//    buf.write_into_buffer(be16toh(*(uint16_t *) buffer));
-//}
-//
-//void Client::read_event(Buffer &buf) {
-//    char buffer[1];
-//    get_n_bytes_from_server(buffer, 1);
-//    auto event_id = (uint8_t) buffer[0];
-////    buf.write_into_buffer(event_id);
-//    buf.reset_buffer();
-//    switch (event_id) {
-//        case BOMB_PLACED:
-//            cout << "Received BOMB_PLACED" << endl;
-//            read_bomb_placed(buf);
-//            break;
-//        case BOMB_EXPLODED:
-//            cout << "Received BOMB_EXPLODED" << endl;
-//            read_bomb_exploded(buf);
-//            break;
-//        case PLAYER_MOVED:
-//            cout << "Received PLAYER_MOVED" << endl;
-//            read_player_moved(buf);
-//            break;
-//        case BLOCK_PLACED:
-//            cout << "Received BLOCK_PLACED" << endl;
-//            read_block_placed(buf);
-//            break;
-//        default:
-//            cout << "Received unknown event" << endl;
-//            // TODO handle unknown event
-//            break;
-//    }
-//}
-//
-//void Client::read_bomb_placed(Buffer &buf) {
-//    char buffer[BUFFER_SIZE];
-//    get_n_bytes_from_server(buffer, sizeof(bomb_id_t));
-//    buf.write_into_buffer(*(bomb_id_t *) buffer);
-//    read_position(buf);
-//}
-//
-//void Client::read_bomb_exploded(Buffer &buf) {
-//    char buffer[BUFFER_SIZE];
-//    get_n_bytes_from_server(buffer, sizeof(bomb_id_t));
-//    buf.write_into_buffer(*(bomb_id_t *) buffer);
-//    get_n_bytes_from_server(buffer, sizeof(uint32_t));  // list of destroyed robots
-//    uint32_t list_size = *(uint32_t *) buffer;
-//    buf.write_into_buffer(list_size);
-//    for (uint32_t i = 0; i < list_size; i++) {
-//        get_n_bytes_from_server(buffer, sizeof(player_id_t));
-//        buf.write_into_buffer(*(player_id_t *) buffer);
-//    }
-//    get_n_bytes_from_server(buffer, sizeof(uint32_t));  // list of destroyed blocks
-//    list_size = *(uint32_t *) buffer;
-//    buf.write_into_buffer(list_size);
-//    for (uint32_t i = 0; i < list_size; i++) {
-//        read_position(buf);
-//    }
-//}
-//
-//void Client::read_player_moved(Buffer &buf) {
-//    char buffer[BUFFER_SIZE];
-//    get_n_bytes_from_server(buffer, sizeof(player_id_t));
-//    buf.write_into_buffer(*(player_id_t *) buffer);
-//    read_position(buf);
-//    game.move_player(buf);
-//}
-//
-//void Client::read_block_placed(Buffer &buf) {
-//    read_position(buf);
-//    game.place_block(buf);
-//}
-
 void Client::read_hello(Buffer &buf) {
     char buffer[2];
-    read_str(buf);                                  // server name
+    read_str(tcp_socket_fd, buf);                                  // server name
     get_n_bytes_from_server(buffer, 1);
     buf.write_into_buffer(*(uint8_t *) buffer);   // players count
     get_n_bytes_from_server(buffer, 2);
@@ -311,12 +217,12 @@ void Client::read_hello(Buffer &buf) {
     get_n_bytes_from_server(buffer, 2);
     buf.write_into_buffer(*(uint16_t *) buffer);  // bomb timer
     game = Game(buf);
-    uint32_t map_size = 0;
-    buf.write_into_buffer(map_size);
+    uint32_t map_len = 0;
+    buf.write_into_buffer(map_len);
 }
 
 void Client::read_accepted_player(Buffer &buf) {
-    read_player(buf);
+    read_player(tcp_socket_fd, buf);
     player_id_t player_id = buf_server_to_gui.read_1_byte();
     Player player(buf_server_to_gui);
     game.add_player(player_id, player);
@@ -325,48 +231,45 @@ void Client::read_accepted_player(Buffer &buf) {
 void Client::read_game_started(Buffer &buf) {
     char buffer[BUFFER_SIZE];
     get_n_bytes_from_server(buffer, 4);
-    uint32_t map_size = be32toh(*(uint32_t *) buffer);
-    cout << "Game started with " << map_size << " players" << endl;
+    uint32_t map_len = be32toh(*(uint32_t *) buffer);
+    cout << "Game started with " << map_len << " players" << endl;
     buf.print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
-    for (uint32_t i = 0; i < map_size; i++) {
+    for (uint32_t i = 0; i < map_len; i++) {
         read_accepted_player(buf);
     }
 }
 
 void Client::read_turn(Buffer &buf) {
-    char buffer[BUFFER_SIZE];
-    get_n_bytes_from_server(buffer, 2);
-    uint16_t turn = be16toh(*(uint16_t *) buffer);
-    buf.write_into_buffer(turn);
-    get_n_bytes_from_server(buffer, 4);
-    uint32_t list_size = be32toh(*(uint32_t *) buffer);
-    cout << "List size: " << list_size << endl;
-    buf.write_into_buffer(list_size);
-    buf.print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
-    for (uint32_t i = 0; i < list_size; i++) {
-        read_event(buf);
+    char local_buf[sizeof(list_len_t)];
+    get_n_bytes_from_server(local_buf, sizeof(turn_t));
+    turn_t turn = be16toh(*(turn_t *) local_buf);
+    game.set_turn(turn);
+    get_n_bytes_from_server(local_buf, sizeof(list_len_t));
+    list_len_t list_len = be32toh(*(list_len_t *) local_buf);
+    cout << "List size: " << list_len << endl;
+//    buf.print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
+    for (list_len_t i = 0; i < list_len; i++) {
+        read_event(tcp_socket_fd, buf, game);
     }
 }
 
 void Client::read_game_ended(Buffer &buf) {
-    char buffer[BUFFER_SIZE];
-    get_n_bytes_from_server(buffer, 4);
-    uint32_t map_size = *(uint32_t *) buffer;
-    buf.write_into_buffer(map_size);
-    for (uint32_t i = 0; i < map_size; i++) {
-        get_n_bytes_from_server(buffer, sizeof(player_id_t));
-        player_id_t player_id = buffer[0];
-        get_n_bytes_from_server(buffer, sizeof(score_t));
-        score_t score = *(score_t *) buffer;
+    char local_buf[sizeof(map_len_t)];
+    get_n_bytes_from_server(local_buf, sizeof(map_len_t));
+    map_len_t map_len = *(map_len_t *) local_buf;
+    buf.write_into_buffer(map_len);
+    for (map_len_t i = 0; i < map_len; i++) {
+        get_n_bytes_from_server(local_buf, sizeof(player_id_t));
+        player_id_t player_id = local_buf[0];
+        get_n_bytes_from_server(local_buf, sizeof(score_t));
+        score_t score = *(score_t *) local_buf;
         // TOOD dodac do mapy
     }
 }
 
 void Client::run() {
-    thread
-            gui_to_server_thread([this] { gui_to_server_handler(); });
-    thread
-            server_to_gui_thread([this] { server_to_gui_handler(); });
+    thread gui_to_server_thread([this] { gui_to_server_handler(); });
+    thread server_to_gui_thread([this] { server_to_gui_handler(); });
     gui_to_server_thread.join();
     server_to_gui_thread.join();
 }

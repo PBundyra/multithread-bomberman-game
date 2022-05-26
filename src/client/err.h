@@ -1,11 +1,10 @@
 #ifndef MIMUW_SIK_ERR_H
 #define MIMUW_SIK_ERR_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdarg>
+#include <cerrno>
 
 // Evaluate `x`: if non-zero, describe it as a standard error code and exit with an error.
 #define CHECK(x)                                                          \

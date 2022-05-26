@@ -3,6 +3,7 @@
 
 #include <string>
 #include "buffer.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -20,6 +21,6 @@ public:
     void generate_respond(Buffer &buf);
 };
 
-void read_player(Buffer &buf);
+void read_player(int socket_fd, Buffer &buf);
 
 #endif //PLAYER_H
