@@ -36,16 +36,6 @@ public:
 
     void write_into_buffer(const char *msg, size_t len);
 
-    void overwrite_buffer(uint8_t msg, size_t pos);
-
-    void overwrite_buffer(uint16_t msg, size_t pos);
-
-    void overwrite_buffer(uint32_t msg, size_t pos);
-
-    void overwrite_buffer(uint64_t msg, size_t pos);
-
-    void overwrite_buffer(const char *msg, size_t len, size_t pos);
-
     uint8_t read_1_byte();
 
     uint16_t read_2_bytes();

@@ -17,7 +17,7 @@ void Buffer::reset_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
 }
 
-void Buffer::print_buffer(const char * msg, const size_t len) {
+void Buffer::print_buffer(const char *msg, const size_t len) {
     for (size_t i = 0; i < len; ++i) {
         std::cout << (int) msg[i] << " ";
         std::cout << msg[i] << " ";
@@ -57,37 +57,6 @@ void Buffer::write_into_buffer(const uint64_t msg) {
 void Buffer::write_into_buffer(const char *msg, const size_t len) {
     for (size_t i = 0; i < len; i++) {
         write_into_buffer((uint8_t) msg[i]);
-    }
-}
-
-
-void Buffer::overwrite_buffer(const uint8_t msg, const size_t pos) {
-    auto val = msg;
-    memcpy(buffer + pos, &val, sizeof(uint8_t));
-}
-
-
-void Buffer::overwrite_buffer(const uint16_t msg, const size_t pos) {
-    auto val = htobe16(msg);
-    memcpy(buffer + pos, &val, sizeof(uint16_t));
-}
-
-
-void Buffer::overwrite_buffer(const uint32_t msg, const size_t pos) {
-    auto val = htobe32(msg);
-    memcpy(buffer + pos, &val, sizeof(uint32_t));
-}
-
-
-void Buffer::overwrite_buffer(const uint64_t msg, const size_t pos) {
-    auto val = htobe64(msg);
-    memcpy(buffer + pos, &val, sizeof(uint64_t));
-}
-
-
-void Buffer::overwrite_buffer(const char *msg, const size_t len, const size_t pos) {
-    for (size_t i = 0; i < len; i++) {
-        overwrite_buffer((uint8_t) msg[i], pos + i);
     }
 }
 
