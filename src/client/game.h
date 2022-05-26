@@ -11,11 +11,8 @@
 #include "player.h"
 #include "buffer.h"
 
-using namespace std;
-
 using score_t = uint32_t;
 using turn_t = uint16_t;
-using player_id_t = uint8_t;
 using bomb_id_t = uint32_t;
 
 struct Bomb {
@@ -27,10 +24,9 @@ struct Bomb {
     void generate_respond(Buffer &buf) const;
 };
 
-
 class Game {
 private:
-    string server_name;
+    std::string server_name;
     uint8_t players_count{};
     uint16_t size_x{};
     uint16_t size_y{};
@@ -38,12 +34,13 @@ private:
     uint16_t explosion_radius{};
     uint16_t bomb_timer{};
     uint16_t turn{};
-    unordered_map<player_id_t, Player> players{};
-    unordered_map<player_id_t, Position> players_positions{};
-    set<Position> blocks;
-    unordered_map<bomb_id_t, Bomb> bombs;
-    set<Position> explosions;
-    unordered_map<player_id_t, score_t> scores;
+    std::unordered_map<player_id_t, Player> players{};
+    std::unordered_map<player_id_t, Position> players_positions{};
+    std::set<Position> blocks;
+    std::unordered_map<bomb_id_t, Bomb> bombs;
+    std::set<Position> explosions;
+    std::unordered_map<player_id_t, score_t> scores;
+    std::set<player_id_t> dead_players;
 
 public:
     Game() = default;
@@ -58,13 +55,13 @@ public:
         explosion_radius = buffer.read_2_bytes();
         bomb_timer = buffer.read_2_bytes();
 
-        cout << "Server name: " << server_name << endl;
-        cout << "No players: " << (int) players_count << endl;
-        cout << "Size X: " << size_x << endl;
-        cout << "Size Y: " << size_y << endl;
-        cout << "Game length: " << game_length << endl;
-        cout << "Explosion radius: " << explosion_radius << endl;
-        cout << "Bomb timer: " << bomb_timer << endl;
+        std::cout << "Server name: " << server_name << std::endl;
+        std::cout << "No players: " << (int) players_count << std::endl;
+        std::cout << "Size X: " << size_x << std::endl;
+        std::cout << "Size Y: " << size_y << std::endl;
+        std::cout << "Game length: " << game_length << std::endl;
+        std::cout << "Explosion radius: " << explosion_radius << std::endl;
+        std::cout << "Bomb timer: " << bomb_timer << std::endl;
     };
 
     void generate_lobby_respond(Buffer &buf);
@@ -75,6 +72,8 @@ public:
 
     void move_player(Buffer &buf);
 
+    void kill_player(Buffer &buf);
+
     void place_block(Buffer &buf);
 
     void destroy_block(Buffer &buf);
@@ -84,6 +83,8 @@ public:
     void explode_bomb(Buffer &buf);
 
     void reset_game();
+
+    void reset_turn();
 
     void set_turn(turn_t new_turn);
 };

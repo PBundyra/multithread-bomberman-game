@@ -38,11 +38,11 @@
 
 typedef struct input_params_t {
     port_t port;
-    string player_name;
+    std::string player_name;
     port_t gui_port;
-    string gui_host;
+    std::string gui_host;
     port_t server_port;
-    string server_host;
+    std::string server_host;
     struct sockaddr_in server_addr;
     struct sockaddr_in gui_addr;
 } input_params_t;
@@ -52,18 +52,18 @@ input_params_t parse_cli_params(int argc, char **argv);
 class Client {
 private:
     port_t port;
-    string player_name;
+    std::string player_name;
     port_t gui_port;
-    string gui_host;
+    std::string gui_host;
     port_t server_port;
-    string server_host;
+    std::string server_host;
     struct sockaddr_in server_addr;
     struct sockaddr_in gui_addr;
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
     Game game;
-    atomic_bool is_game_started;
+    std::atomic_bool is_game_started;
     int tcp_socket_fd;
     int udp_socket_fd;
 
@@ -85,11 +85,11 @@ private:
 
     size_t get_n_bytes_from_server(void *buffer, size_t n) const;
 
-    void send_msg_to_server(size_t msg_len);
+    void send_msg_to_server();
 
     void gui_to_server_handler();
 
-    void server_to_gui_handler();
+    [[noreturn]] void server_to_gui_handler();
 
 public:
     explicit Client(input_params_t &input_params) : port(input_params.port), player_name(input_params.player_name),
@@ -101,9 +101,9 @@ public:
                                                     is_game_started(false) {
         tcp_socket_fd = open_tcp_socket();
         connect_socket(tcp_socket_fd, &input_params.server_addr);
-        cout << "Connected to server" << endl;
+        INFO("Connected to server");
         udp_socket_fd = bind_socket(port);
-        cout << "Connected to GUI" << endl;
+        INFO("Connected to GUI");
     }
 
     ~Client() {

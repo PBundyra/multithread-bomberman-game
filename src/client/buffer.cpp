@@ -18,7 +18,6 @@ void Buffer::reset_buffer() {
 }
 
 void Buffer::print_buffer(const char * msg, const size_t len) {
-    std::cout << "Buffer: " << msg << std::endl;
     for (size_t i = 0; i < len; ++i) {
         std::cout << (int) msg[i] << " ";
         std::cout << msg[i] << " ";

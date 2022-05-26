@@ -5,30 +5,29 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <iostream>
 
 #include "buffer.h"
 #include "err.h"
 
+#ifdef NDEBUG
+constexpr bool debug = false;
+#else
+constexpr bool debug = true;
+#endif
+
+#define INFO(x)                                     \
+    do {                                            \
+        if (debug) {                                \
+            std::cerr << x << std::endl;            \
+        }                                           \
+    } while (0)
+
+using str_len_t = uint8_t;
 using list_len_t = uint32_t;
 using map_len_t = uint32_t;
 using port_t = uint16_t;
-
-enum Direction {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT
-};
-
 using Position = std::pair<uint16_t, uint16_t>;
-
-//struct Position {
-//    uint16_t x;
-//    uint16_t y;
-//
-//    Position(uint16_t x, uint16_t y) : x(x), y(y) {};
-//};
-
 
 size_t get_n_bytes_from_server(int socket_fd, void *buffer, size_t n);
 

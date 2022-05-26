@@ -22,18 +22,16 @@ int bind_socket(port_t port) {
     server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
     server_address.sin_port = htons(port);
 
-    // bind the socket to a concrete address
     CHECK_ERRNO(bind(socket_fd, (struct sockaddr *) &server_address,
                      (socklen_t) sizeof(server_address)));
-
     return socket_fd;
 }
 
 void read_str(int socket_fd, Buffer &buf) {
-    char buffer[BUFFER_SIZE];
-    get_n_bytes_from_server(socket_fd, buffer, 1);
-    auto str_len = (uint8_t) buffer[0];
+    char local_buf[256];
+    get_n_bytes_from_server(socket_fd, local_buf, sizeof(str_len_t));
+    auto str_len = (str_len_t) local_buf[0];
     buf.write_into_buffer(str_len);
-    get_n_bytes_from_server(socket_fd, buffer, str_len);
-    buf.write_into_buffer(buffer, str_len);
+    get_n_bytes_from_server(socket_fd, local_buf, str_len);
+    buf.write_into_buffer(local_buf, str_len);
 }
