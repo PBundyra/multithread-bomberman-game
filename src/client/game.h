@@ -40,6 +40,7 @@ private:
 
     void apply_changes(unique_ptr<BlockPlaced> event);
 
+
 public:
     Game() = default;
 
@@ -70,6 +71,16 @@ public:
     void generate_game_respond(Buffer &buf);
 
     void add_player(player_id_t id, Player &player);
+
+    void game_started(Buffer &buf);
+
+    void move_player(Buffer &buf);
+
+    void place_block(Buffer &buf);
+
+    void place_bomb(Buffer &buf);
+
+    void explode_bomb(Buffer &buf);
 };
 
 

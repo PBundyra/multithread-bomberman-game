@@ -8,7 +8,6 @@
 //    read_str(buf);                                  // player address
 //}
 void Player::generate_respond(Buffer &buf){
-    cout << "Sending player " << name << " | " << addr << endl;
     buf.write_into_buffer((uint8_t) name.size());
     buf.write_into_buffer(name.c_str(), (size_t) name.size());
     buf.write_into_buffer((uint8_t) addr.size());

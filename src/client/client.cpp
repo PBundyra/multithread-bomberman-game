@@ -74,7 +74,7 @@ input_params_t parse_cli_params(int argc, char **argv) {
 
 size_t Client::get_msg_from_gui() {
     socklen_t address_length = (socklen_t)
-    sizeof(gui_addr);
+            sizeof(gui_addr);
     errno = 0;
     ssize_t received_length = recvfrom(udp_socket_fd, buf_server_to_gui.get_buffer(), BUFFER_SIZE,
                                        0,
@@ -89,13 +89,13 @@ size_t Client::get_msg_from_gui() {
 void Client::send_msg_to_gui() {
     socklen_t
             address_length = (socklen_t)
-    sizeof(gui_addr);
-    cout << "Sending to GUI"<< endl;
+            sizeof(gui_addr);
+    cout << "Sending to GUI" << endl;
     ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
                                  buf_server_to_gui.get_no_written_bytes(), 0,
                                  (struct sockaddr *) &gui_addr, address_length);
     cout << "Send " << sent_length << " bytes to GUI" << endl;
-    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), sent_length);
+//    buf_server_to_gui.print_buffer(buf_server_to_gui.get_buffer(), sent_length);
     ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
 }
 
@@ -105,7 +105,7 @@ void Client::parse_msg_from_gui(const size_t msg_len) {
     if (is_game_started) {  // sends PlaceBomb or PlaceBlock or Move
         uint8_t msg_code = buf_gui_to_server.read_1_byte();
         cout << "Sending " << (int) (msg_code + 1) << endl;
-        buf_gui_to_server.overwrite_buffer((uint8_t)(msg_code + 1), (size_t) 0);
+        buf_gui_to_server.overwrite_buffer((uint8_t) (msg_code + 1), (size_t) 0);
     } else {    // sends Join
         cout << "Sending Join" << endl;
         buf_gui_to_server.reset_buffer();
@@ -154,7 +154,8 @@ void Client::gui_to_server_handler() {
 void Client::server_to_gui_handler() {
     char buffer[1];
     size_t msg_len;
-    do {
+//    do {
+    for (int i = 0; i < 6; i++) {
         buf_server_to_gui.reset_buffer();
         msg_len = get_n_bytes_from_server(buffer, 1);
 //        buf_server_to_gui.write_into_buffer((uint8_t) buffer[0]);
@@ -198,7 +199,8 @@ void Client::server_to_gui_handler() {
                 // TODO handle unknown message
                 break;
         }
-    } while (msg_len != 0);
+    }
+//    } while (msg_len != 0);
 }
 
 void Client::read_str(Buffer &buf) {
@@ -221,27 +223,32 @@ void Client::read_player(Buffer &buf) {
 void Client::read_position(Buffer &buf) {
     char buffer[sizeof(uint16_t)];
     get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.x
-    buf.write_into_buffer(*(uint16_t *) buffer);
+    buf.write_into_buffer(be16toh(*(uint16_t *) buffer));
     get_n_bytes_from_server(buffer, sizeof(uint16_t)); // Position.y
-    buf.write_into_buffer(*(uint16_t *) buffer);
+    buf.write_into_buffer(be16toh(*(uint16_t *) buffer));
 }
 
 void Client::read_event(Buffer &buf) {
     char buffer[1];
     get_n_bytes_from_server(buffer, 1);
-    uint8_t event_id = (uint8_t) buffer[0];
-    buf.write_into_buffer(event_id);
+    auto event_id = (uint8_t) buffer[0];
+//    buf.write_into_buffer(event_id);
+    buf.reset_buffer();
     switch (event_id) {
         case BOMB_PLACED:
+            cout << "Received BOMB_PLACED" << endl;
             read_bomb_placed(buf);
             break;
         case BOMB_EXPLODED:
+            cout << "Received BOMB_EXPLODED" << endl;
             read_bomb_exploded(buf);
             break;
         case PLAYER_MOVED:
+            cout << "Received PLAYER_MOVED" << endl;
             read_player_moved(buf);
             break;
         case BLOCK_PLACED:
+            cout << "Received BLOCK_PLACED" << endl;
             read_block_placed(buf);
             break;
         default:
@@ -282,10 +289,12 @@ void Client::read_player_moved(Buffer &buf) {
     get_n_bytes_from_server(buffer, sizeof(player_id_t));
     buf.write_into_buffer(*(player_id_t *) buffer);
     read_position(buf);
+    game.move_player(buf);
 }
 
 void Client::read_block_placed(Buffer &buf) {
     read_position(buf);
+    game.place_block(buf);
 }
 
 void Client::read_hello(Buffer &buf) {
@@ -322,21 +331,27 @@ void Client::read_accepted_player(Buffer &buf) {
 void Client::read_game_started(Buffer &buf) {
     char buffer[BUFFER_SIZE];
     get_n_bytes_from_server(buffer, 4);
-    uint32_t map_size = *(uint32_t *) buffer;
-    buf.write_into_buffer(map_size);
+    uint32_t map_size = be32toh(*(uint32_t *) buffer);
+    cout << "Game started with " << map_size << " players" << endl;
+    buf.print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
     for (uint32_t i = 0; i < map_size; i++) {
-        read_player(buf);
+        read_accepted_player(buf);
     }
-    parse_game_started();
+//    parse_game_started();
 }
 
 void Client::parse_game_started() {}
 
 void Client::read_turn(Buffer &buf) {
     char buffer[BUFFER_SIZE];
+    get_n_bytes_from_server(buffer, 2);
+    uint16_t turn = be16toh(*(uint16_t *) buffer);
+    buf.write_into_buffer(turn);
     get_n_bytes_from_server(buffer, 4);
-    uint32_t list_size = *(uint32_t *) buffer;
+    uint32_t list_size = be32toh(*(uint32_t *) buffer);
+    cout << "List size: " << list_size << endl;
     buf.write_into_buffer(list_size);
+    buf.print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
     for (uint32_t i = 0; i < list_size; i++) {
         read_event(buf);
     }
@@ -364,9 +379,9 @@ void Client::parse_game_ended() {}
 
 void Client::run() {
     thread
-    gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
+            gui_to_server_thread(bind(&Client::gui_to_server_handler, this));
     thread
-    server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
+            server_to_gui_thread(bind(&Client::server_to_gui_handler, this));
     gui_to_server_thread.join();
     server_to_gui_thread.join();
 }

@@ -13,11 +13,15 @@ enum Direction {
 struct Position {
     uint16_t x;
     uint16_t y;
+
+    Position(uint16_t x, uint16_t y) : x(x), y(y) {};
 };
 
 struct Bomb {
     Position pos;
     uint16_t timer;
+
+    Bomb(Position pos, uint16_t timer) : pos(pos), timer(timer) {};
 
     void generate_respond(Buffer &buf) const{
         buf.write_into_buffer(pos.x);

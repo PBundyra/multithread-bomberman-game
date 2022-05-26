@@ -37,7 +37,8 @@ void Game::generate_game_respond(Buffer &buf) {
     buf.write_into_buffer(htobe16(game_length));
     buf.write_into_buffer(htobe16(turn));
     auto players_map_size = (uint32_t) players.size();
-    buf.write_into_buffer(htobe32(players_map_size));
+    cout << "players_map_size: " << players_map_size << endl;
+    buf.write_into_buffer(players_map_size);
     for (auto &player: players) {
         buf.write_into_buffer(player.first);
         player.second.generate_respond(buf);
@@ -72,4 +73,25 @@ void Game::generate_game_respond(Buffer &buf) {
         buf.write_into_buffer(score.first);
         buf.write_into_buffer(htobe32(score.second));
     }
+}
+
+void Game::move_player(Buffer &buf) {
+    player_id_t player_id = buf.read_1_byte();
+    uint16_t x = buf.read_2_bytes();
+    uint16_t y = buf.read_2_bytes();
+    players_positions.insert(make_pair(player_id, Position(x, y)));
+}
+
+void Game::place_block(Buffer &buf) {
+    uint16_t x = buf.read_2_bytes();
+    uint16_t y = buf.read_2_bytes();
+    blocks.emplace_back(x, y);
+}
+
+void Game::place_bomb(Buffer &buf) {
+
+}
+
+void Game::explode_bomb(Buffer &buf) {
+
 }
