@@ -2,6 +2,7 @@
 
 void Game::add_player(player_id_t id, Player &player) {
     players.insert(std::make_pair(id, player));
+    scores.insert(std::make_pair(id, 0));
 }
 
 void Game::generate_lobby_respond(Buffer &buf) {
