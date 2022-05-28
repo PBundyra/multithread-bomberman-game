@@ -24,7 +24,7 @@ public:
 
     void reset_buffer();
 
-
+    // Prints the buffer to stderr in 3 formats: 1) decimal, 2) ascii, 3) binary.
     static void print_buffer(const char *msg, size_t len);
 
     void write_into_buffer(uint8_t msg);

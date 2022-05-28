@@ -30,7 +30,8 @@ using str_len_t = uint8_t;
 using list_len_t = uint32_t;
 using map_len_t = uint32_t;
 using port_t = uint16_t;
-using Position = std::pair<uint16_t, uint16_t>;
+using cord_t = uint16_t;
+using Position = std::pair<cord_t, cord_t>;
 
 size_t get_n_bytes_from_server(int socket_fd, void *buffer, size_t n);
 

@@ -116,7 +116,7 @@ void Client::parse_msg_from_gui(const size_t msg_len) {
         buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
         buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
         buf_gui_to_server.write_into_buffer(player_name.c_str(), (size_t) player_name.size());
-        cout << "Player name: " << player_name << endl;
+        INFO("Player name:" << player_name);
     }
     INFO("Message to server parsed");
 }
@@ -130,9 +130,7 @@ size_t Client::get_n_bytes_from_server(void *buffer, const size_t n) const {
         INFO("Server closed connection");
         exit(0);
     }
-    std::cout << "Received message from server of length: " << received_length << "\n";
-    // TODO CHANGE
-//    INFO("Received message from server");
+    INFO ("Received " << received_length << " bytes from server");
     return (size_t) received_length;
 }
 
@@ -201,7 +199,7 @@ void Client::read_turn(Buffer &buf) {
         deserialize_event(tcp_socket_fd, buf, game);
     }
     game.add_scores();
-    game.erase_blocks();
+    game.erase_destroyed_blocks();
     game.serialize_game_respond(buf);
     game.reset_turn();
     send_msg_to_gui();

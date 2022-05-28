@@ -1,12 +1,8 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <memory>
-#include <iostream>
 #include <unordered_map>
-#include <unordered_set>
 #include <set>
-#include <utility>
 
 #include "utils.h"
 #include "player.h"
@@ -22,7 +18,8 @@ struct Bomb {
 
     Bomb(Position pos, uint16_t timer) : pos(std::move(pos)), timer(timer) {};
 
-    void generate_respond(Buffer &buf) const;
+    // Serializes the bomb into a buffer.
+    void serialize_bomb(Buffer &buf) const;
 };
 
 class Game {
@@ -44,10 +41,22 @@ private:
     std::set<player_id_t> dead_players;
     std::set<Position> destroyed_blocks;
 
+    void serialize_players(Buffer &buf);
+
+    void serialize_players_positions(Buffer &buf);
+
+    void serialize_blocks(Buffer &buf);
+
+    void serialize_bombs(Buffer &buf);
+
+    void serialize_explosions(Buffer &buf);
+
+    void serialize_scores(Buffer &buf);
+
 public:
     Game() = default;
 
-    explicit Game(Buffer &buffer) {
+    explicit Game(Buffer &buffer) : turn(0) {
         uint8_t server_name_length = buffer.read_1_byte();
         server_name = buffer.read_n_bytes(server_name_length);
         players_count = buffer.read_1_byte();
@@ -66,32 +75,41 @@ public:
         INFO("Bomb timer: " << bomb_timer);
     };
 
+    // Serializes a lobby state to a buffer
     void serialize_lobby_respond(Buffer &buf);
 
+    // Serializes a game state to a buffer
     void serialize_game_respond(Buffer &buf);
 
     void add_player(player_id_t id, Player &player);
 
     void move_player(Buffer &buf);
 
+    // Adds a player to the dead players set.
     void kill_player(Buffer &buf);
 
     void place_block(Buffer &buf);
 
+    // Adds a block to the destroyed blocks set.
     void destroy_block(Buffer &buf);
 
-    void erase_blocks();
+    // Erases blocks that are in the destroyed blocks set.
+    void erase_destroyed_blocks();
 
     void place_bomb(Buffer &buf);
 
     void explode_bomb(Buffer &buf);
 
+    // Resets the game to the lobby state.
     void reset_game();
 
+    // Increases score of players that are in the dead players set.
     void add_scores();
 
+    // Reset turn to the state without explosions, dead players and destroyed blocks.
     void reset_turn();
 
+    // Sets the turn number.
     void set_turn(turn_t new_turn);
 };
 

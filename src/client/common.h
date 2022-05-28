@@ -166,7 +166,6 @@ inline static size_t receive_message_tcp(int socket_fd, void *buffer, size_t max
     if (received_length < 0) {
         PRINT_ERRNO();
     }
-    std::cout << "RECEIVED LENGTH: " << received_length << "\n";
     return (size_t) received_length;
 }
 
