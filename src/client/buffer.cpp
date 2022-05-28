@@ -5,6 +5,12 @@
 #include <cstring>
 #include "err.h"
 
+#ifdef NDEBUG
+constexpr bool debug = false;
+#else
+constexpr bool debug = true;
+#endif
+
 char *Buffer::get_buffer() {
     return buffer;
 }
@@ -20,16 +26,17 @@ void Buffer::reset_buffer() {
 }
 
 void Buffer::print_buffer(const char *msg, const size_t len) {
-    for (size_t i = 0; i < len; ++i) {
-        std::cout << (int) msg[i] << " ";
-        std::cout << msg[i] << " ";
-        std::bitset<8> bs4(msg[i]);
-        std::cout << bs4 << " ";
+    if (debug) {
+        for (size_t i = 0; i < len; ++i) {
+            std::cerr << (int) msg[i] << " " << msg[i] << " ";
+            std::bitset<8> bs4(msg[i]);
+            std::cerr << bs4 << " ";
 
-        if (i % 6 == 0 && i != 0)
-            std::cout << std::endl;
+            if (i % 6 == 0 && i != 0)
+                std::cerr << std::endl;
+        }
+        std::cerr << std::endl;
     }
-    std::cout << std::endl;
 }
 
 void Buffer::write_into_buffer(const uint8_t msg) {

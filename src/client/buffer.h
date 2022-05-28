@@ -24,6 +24,7 @@ public:
 
     void reset_buffer();
 
+
     static void print_buffer(const char *msg, size_t len);
 
     void write_into_buffer(uint8_t msg);
@@ -34,6 +35,7 @@ public:
 
     void write_into_buffer(uint64_t msg);
 
+    // Writes a string with given len into the buffer.
     void write_into_buffer(const char *msg, size_t len);
 
     uint8_t read_1_byte();

@@ -5,7 +5,7 @@ void Game::add_player(player_id_t id, Player &player) {
     scores.insert(std::make_pair(id, 0));
 }
 
-void Game::generate_lobby_respond(Buffer &buf) {
+void Game::serialize_lobby_respond(Buffer &buf) {
     buf.reset_buffer();
     uint8_t msg_code = 0;
     buf.write_into_buffer(msg_code);
@@ -25,7 +25,7 @@ void Game::generate_lobby_respond(Buffer &buf) {
     }
 }
 
-void Game::generate_game_respond(Buffer &buf) {
+void Game::serialize_game_respond(Buffer &buf) {
     buf.reset_buffer();
     uint8_t msg_code = 1;
     buf.write_into_buffer(msg_code);

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include <utility>
 
 #include "utils.h"
 #include "player.h"
@@ -19,7 +20,7 @@ struct Bomb {
     Position pos;
     uint16_t timer;
 
-    Bomb(Position pos, uint16_t timer) : pos(pos), timer(timer) {};
+    Bomb(Position pos, uint16_t timer) : pos(std::move(pos)), timer(timer) {};
 
     void generate_respond(Buffer &buf) const;
 };
@@ -56,18 +57,18 @@ public:
         explosion_radius = buffer.read_2_bytes();
         bomb_timer = buffer.read_2_bytes();
 
-        std::cout << "Server name: " << server_name << std::endl;
-        std::cout << "No players: " << (int) players_count << std::endl;
-        std::cout << "Size X: " << size_x << std::endl;
-        std::cout << "Size Y: " << size_y << std::endl;
-        std::cout << "Game length: " << game_length << std::endl;
-        std::cout << "Explosion radius: " << explosion_radius << std::endl;
-        std::cout << "Bomb timer: " << bomb_timer << std::endl;
+        INFO("Server name: " << server_name);
+        INFO("Players count: " << (int) players_count);
+        INFO("Size x: " << size_x);
+        INFO("Size y: " << size_y);
+        INFO("Game length: " << game_length);
+        INFO("Explosion radius: " << explosion_radius);
+        INFO("Bomb timer: " << bomb_timer);
     };
 
-    void generate_lobby_respond(Buffer &buf);
+    void serialize_lobby_respond(Buffer &buf);
 
-    void generate_game_respond(Buffer &buf);
+    void serialize_game_respond(Buffer &buf);
 
     void add_player(player_id_t id, Player &player);
 
@@ -93,6 +94,5 @@ public:
 
     void set_turn(turn_t new_turn);
 };
-
 
 #endif //GAME_H

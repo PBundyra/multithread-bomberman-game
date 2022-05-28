@@ -166,7 +166,7 @@ void Client::read_hello(Buffer &buf) {
     buf.write_into_buffer(*(uint16_t *) local_buf);             // bomb timer
     game = Game(buf);
     buf.reset_buffer();
-    game.generate_lobby_respond(buf);
+    game.serialize_lobby_respond(buf);
     send_msg_to_gui();
 }
 
@@ -176,7 +176,7 @@ void Client::read_accepted_player(Buffer &buf) {
     Player player(buf_server_to_gui);
     game.add_player(player_id, player);
     buf.reset_buffer();
-    game.generate_lobby_respond(buf);
+    game.serialize_lobby_respond(buf);
 }
 
 void Client::read_game_started(Buffer &buf) {
@@ -202,7 +202,7 @@ void Client::read_turn(Buffer &buf) {
     }
     game.add_scores();
     game.erase_blocks();
-    game.generate_game_respond(buf);
+    game.serialize_game_respond(buf);
     game.reset_turn();
     send_msg_to_gui();
 }
@@ -218,7 +218,7 @@ void Client::read_game_ended(Buffer &buf) {
     is_game_started = false;
     buf.reset_buffer();
     game.reset_game();
-    game.generate_lobby_respond(buf);
+    game.serialize_lobby_respond(buf);
     send_msg_to_gui();
 }
 

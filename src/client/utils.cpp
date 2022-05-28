@@ -57,7 +57,7 @@ int bind_tcp_socket(port_t port) {
 }
 
 void read_str(int socket_fd, Buffer &buf) {
-    char local_buf[256];
+    char local_buf[MAX_STR_LEN];
     get_n_bytes_from_server(socket_fd, local_buf, sizeof(str_len_t));
     auto str_len = (str_len_t) local_buf[0];
     buf.write_into_buffer(str_len);
