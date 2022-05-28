@@ -2,13 +2,13 @@
 #define BUFFER_H
 
 #include <string>
-#include <iostream>
-#include <cstring>
-#include "err.h"
 
 #define MAX_DATAGRAM_SIZE 65507
 #define BUFFER_SIZE MAX_DATAGRAM_SIZE
 
+// The bytes in the buffer are always in network byte order.
+// Reading from buffer returns the bytes in host byte order.
+// Using writing functions user must ensure that the bytes are in network byte order.
 class Buffer {
 private:
     char buffer[MAX_DATAGRAM_SIZE]{};
@@ -44,7 +44,8 @@ public:
 
     uint64_t read_8_bytes();
 
-    std::string read_n_bytes(size_t len);
+    // Reads n bytes from the buffer and returns them as a string
+    std::string read_n_bytes(size_t n);
 };
 
 #endif //BUFFER_H

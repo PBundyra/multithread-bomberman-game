@@ -12,16 +12,19 @@ private:
     std::string name;
     std::string addr;
 public:
-    Player(Buffer &buf) {
+    explicit Player(Buffer &buf) {
         name = buf.read_n_bytes((size_t) buf.read_1_byte());
         addr = buf.read_n_bytes((size_t) buf.read_1_byte());
 
         INFO("Created player << " << name << " with address " << addr << ".");
     }
 
-    void generate_respond(Buffer &buf);
+    // Serializes the player and writes it to the buffer.
+    void serialize_player(Buffer &buf);
+
+    // Receives a message with a player from the server and writes it to the buffer.
+    static void read_player(int socket_fd, Buffer &buf);
 };
 
-void read_player(int socket_fd, Buffer &buf);
 
 #endif //PLAYER_H

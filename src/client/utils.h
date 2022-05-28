@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <iostream>
+#include <cstring>
 
 #include "buffer.h"
 #include "err.h"
@@ -15,6 +16,8 @@ constexpr bool debug = false;
 #else
 constexpr bool debug = true;
 #endif
+
+#define MAX_STR_LEN 256
 
 #define INFO(x)                                     \
     do {                                            \

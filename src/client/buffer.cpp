@@ -1,7 +1,9 @@
 #include "buffer.h"
 
 #include <bitset>
-// TODO zastanowic sie nad includami
+#include <iostream>
+#include <cstring>
+#include "err.h"
 
 char *Buffer::get_buffer() {
     return buffer;
@@ -88,8 +90,8 @@ uint64_t Buffer::read_8_bytes() {
     return be64toh(val);
 }
 
-std::string Buffer::read_n_bytes(const size_t len) {
-    std::string res = {buffer + no_bytes_read, len};
-    no_bytes_read += len;
+std::string Buffer::read_n_bytes(size_t n) {
+    std::string res = {buffer + no_bytes_read, n};
+    no_bytes_read += n;
     return res;
 }

@@ -21,7 +21,7 @@ void Game::generate_lobby_respond(Buffer &buf) {
     buf.write_into_buffer(htobe32(players_map_size));
     for (auto &player: players) {
         buf.write_into_buffer(player.first);
-        player.second.generate_respond(buf);
+        player.second.serialize_player(buf);
     }
 }
 
@@ -39,7 +39,7 @@ void Game::generate_game_respond(Buffer &buf) {
     buf.write_into_buffer(htobe32(players_map_size));
     for (auto &player: players) {
         buf.write_into_buffer(player.first);
-        player.second.generate_respond(buf);
+        player.second.serialize_player(buf);
     }
     auto players_positions_map_size = (map_len_t) players_positions.size();
     buf.write_into_buffer(htobe32(players_positions_map_size));

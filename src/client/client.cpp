@@ -171,7 +171,7 @@ void Client::read_hello(Buffer &buf) {
 }
 
 void Client::read_accepted_player(Buffer &buf) {
-    read_player(tcp_socket_fd, buf);
+    Player::read_player(tcp_socket_fd, buf);
     player_id_t player_id = buf_server_to_gui.read_1_byte();
     Player player(buf_server_to_gui);
     game.add_player(player_id, player);

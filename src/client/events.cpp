@@ -1,7 +1,5 @@
 #include "events.h"
 
-using namespace std;
-
 void read_position(int socket_fd, Buffer &buf) {
     char buffer[sizeof(uint16_t)];
     get_n_bytes_from_server(socket_fd, buffer, sizeof(uint16_t)); // Position.x
@@ -15,7 +13,7 @@ namespace {
 
     // Deserializes a Bomb Placed event and makes according changes in the game state.
     void deserialize_bomb_placed(int socket_fd, Buffer &buf, Game &game) {
-        char local_buf[BUFFER_SIZE];
+        char local_buf[sizeof(bomb_id_t)];
         get_n_bytes_from_server(socket_fd, local_buf, sizeof(bomb_id_t));
         buf.write_into_buffer(*(bomb_id_t *) local_buf);
         read_position(socket_fd, buf);
@@ -24,7 +22,7 @@ namespace {
 
     // Deserializes a Bomb Exploded event and makes according changes in the game state.
     void read_bomb_exploded(int socket_fd, Buffer &buf, Game &game) {
-        char local_buf[BUFFER_SIZE];
+        char local_buf[sizeof(bomb_id_t)];
         get_n_bytes_from_server(socket_fd, local_buf, sizeof(bomb_id_t));
         buf.write_into_buffer(*(bomb_id_t *) local_buf);
         game.explode_bomb(buf);
