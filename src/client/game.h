@@ -41,6 +41,7 @@ private:
     std::set<Position> explosions;
     std::unordered_map<player_id_t, score_t> scores;
     std::set<player_id_t> dead_players;
+    std::set<Position> destroyed_blocks;
 
 public:
     Game() = default;
@@ -78,11 +79,15 @@ public:
 
     void destroy_block(Buffer &buf);
 
+    void erase_blocks();
+
     void place_bomb(Buffer &buf);
 
     void explode_bomb(Buffer &buf);
 
     void reset_game();
+
+    void add_scores();
 
     void reset_turn();
 

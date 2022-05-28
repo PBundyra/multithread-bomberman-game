@@ -88,6 +88,7 @@ size_t Client::get_msg_from_gui() {
 void Client::send_msg_to_gui() {
     auto address_length = (socklen_t) sizeof(gui_addr);
     INFO("Sending message to GUI");
+    Buffer::print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
     ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
                                  buf_server_to_gui.get_no_written_bytes(), 0,
                                  (struct sockaddr *) &gui_addr, address_length);
@@ -148,51 +149,6 @@ void Client::send_msg_to_server() {
     INFO("Message to server sent");
 }
 
-void Client::gui_to_server_handler() {
-    size_t msg_len;
-    do {
-        buf_gui_to_server.reset_buffer();
-        msg_len = get_msg_from_gui();
-        parse_msg_from_gui(msg_len);
-        send_msg_to_server();
-    } while (msg_len != 0);
-}
-
-[[noreturn]] void Client::server_to_gui_handler() {
-    char local_buf[1];
-    do {
-        buf_server_to_gui.reset_buffer();
-        INFO("Waiting for message from server");
-        get_n_bytes_from_server(local_buf, 1);
-        INFO("Received message from server");
-        switch (local_buf[0]) {
-            case HELLO:
-                INFO("Received HELLO from server");
-                read_hello(buf_server_to_gui);
-                break;
-            case ACCEPTED_PLAYER:
-                INFO("Received ACCEPTED_PLAYER from server");
-                read_accepted_player(buf_server_to_gui);
-                break;
-            case GAME_STARTED:
-                INFO("Received GAME_STARTED from server");
-                read_game_started(buf_server_to_gui);
-                break;
-            case TURN:
-                INFO("Received TURN from server");
-                read_turn(buf_server_to_gui);
-                break;
-            case GAME_ENDED:
-                INFO("Received GAME_ENDED from server");
-                read_game_ended(buf_server_to_gui);
-                break;
-            default:
-                fatal("Received unknown message from server");
-                break;
-        }
-    } while (true);
-}
-
 void Client::read_hello(Buffer &buf) {
     char local_buf[sizeof(uint16_t)];
     read_str(tcp_socket_fd, buf);                         // server name
@@ -221,15 +177,14 @@ void Client::read_accepted_player(Buffer &buf) {
     game.add_player(player_id, player);
     buf.reset_buffer();
     game.generate_lobby_respond(buf);
-    send_msg_to_gui();
 }
 
 void Client::read_game_started(Buffer &buf) {
     char buffer[sizeof(map_len_t)];
     get_n_bytes_from_server(buffer, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) buffer);
-    Buffer::print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
-    for (uint32_t i = 0; i < map_len; i++) {
+    for (map_len_t i = 0; i < map_len; i++) {
+        buf.reset_buffer();
         read_accepted_player(buf);
     }
     is_game_started = true;
@@ -245,7 +200,8 @@ void Client::read_turn(Buffer &buf) {
     for (list_len_t i = 0; i < list_len; i++) {
         read_event(tcp_socket_fd, buf, game);
     }
-    buf.reset_buffer();
+    game.add_scores();
+    game.erase_blocks();
     game.generate_game_respond(buf);
     game.reset_turn();
     send_msg_to_gui();
@@ -264,6 +220,52 @@ void Client::read_game_ended(Buffer &buf) {
     game.reset_game();
     game.generate_lobby_respond(buf);
     send_msg_to_gui();
+}
+
+[[noreturn]] void Client::gui_to_server_handler() {
+    size_t msg_len;
+    do {
+        buf_gui_to_server.reset_buffer();
+        msg_len = get_msg_from_gui();
+        parse_msg_from_gui(msg_len);
+        send_msg_to_server();
+    } while (true);
+}
+
+[[noreturn]] void Client::server_to_gui_handler() {
+    char local_buf[1];
+    do {
+        buf_server_to_gui.reset_buffer();
+        INFO("Waiting for message from server");
+        get_n_bytes_from_server(local_buf, 1);
+        INFO("Received message from server");
+        switch (local_buf[0]) {
+            case HELLO:
+                INFO("Received HELLO from server");
+                read_hello(buf_server_to_gui);
+                break;
+            case ACCEPTED_PLAYER:
+                INFO("Received ACCEPTED_PLAYER from server");
+                read_accepted_player(buf_server_to_gui);
+                send_msg_to_gui();
+                break;
+            case GAME_STARTED:
+                INFO("Received GAME_STARTED from server");
+                read_game_started(buf_server_to_gui);
+                break;
+            case TURN:
+                INFO("Received TURN from server");
+                read_turn(buf_server_to_gui);
+                break;
+            case GAME_ENDED:
+                INFO("Received GAME_ENDED from server");
+                read_game_ended(buf_server_to_gui);
+                break;
+            default:
+                fatal("Received unknown message from server");
+                break;
+        }
+    } while (true);
 }
 
 void Client::run() {

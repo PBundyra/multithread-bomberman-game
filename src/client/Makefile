@@ -12,8 +12,7 @@ buffer: buffer.cpp buffer.h
 
 compile_client: $(client_src).cpp $(client_src).h
 	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o $(client_bin) $(client_src).cpp buffer.cpp game.cpp player.cpp events.cpp utils.cpp -lboost_program_options \
-	&& ./robots-client -p 2137 -s students.mimuw.edu.pl:10015 -d 0.0.0.0:10022 -n essa
-
+	&& ./robots-client -p 2137 -s students.mimuw.edu.pl:10112 -d 0.0.0.0:10022 -n essa
 
 compile_server: $(server_src).cpp
 	$(CCP) -Wall -Wextra -std=c++20 -O2 -o $(server_bin) $(server_src).cpp

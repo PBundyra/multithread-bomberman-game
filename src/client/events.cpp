@@ -53,7 +53,7 @@ void read_bomb_exploded(int socket_fd, Buffer &buf, Game &game) {
     buf.write_into_buffer(be32toh(*(bomb_id_t *) local_buf));
     game.explode_bomb(buf);
     get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint32_t));  // list of destroyed robots
-    uint32_t list_size = *(uint32_t *) local_buf;
+    uint32_t list_size = be32toh(*(uint32_t *) local_buf);
     buf.reset_buffer();
     for (uint32_t i = 0; i < list_size; i++) {
         get_n_bytes_from_server(socket_fd, local_buf, sizeof(player_id_t));
@@ -61,7 +61,7 @@ void read_bomb_exploded(int socket_fd, Buffer &buf, Game &game) {
         game.kill_player(buf);
     }
     get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint32_t));  // list of destroyed blocks
-    list_size = *(uint32_t *) local_buf;
+    list_size = be32toh(*(uint32_t *) local_buf);
     buf.reset_buffer();
     for (uint32_t i = 0; i < list_size; i++) {
         read_position(socket_fd, buf);

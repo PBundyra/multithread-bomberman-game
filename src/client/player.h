@@ -15,6 +15,8 @@ public:
     Player(Buffer &buf) {
         name = buf.read_n_bytes((size_t) buf.read_1_byte());
         addr = buf.read_n_bytes((size_t) buf.read_1_byte());
+
+        INFO("Created player << " << name << " with address " << addr << ".");
     }
 
     void generate_respond(Buffer &buf);
