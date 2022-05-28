@@ -198,7 +198,7 @@ void Client::read_turn(Buffer &buf) {
     get_n_bytes_from_server(local_buf, sizeof(list_len_t));
     list_len_t list_len = be32toh(*(list_len_t *) local_buf);
     for (list_len_t i = 0; i < list_len; i++) {
-        read_event(tcp_socket_fd, buf, game);
+        deserialize_event(tcp_socket_fd, buf, game);
     }
     game.add_scores();
     game.erase_blocks();

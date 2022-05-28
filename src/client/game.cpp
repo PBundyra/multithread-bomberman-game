@@ -89,6 +89,7 @@ void Game::kill_player(Buffer &buf) {
 void Game::place_block(Buffer &buf) {
     uint16_t x = buf.read_2_bytes();
     uint16_t y = buf.read_2_bytes();
+    INFO("Block placed at " << x << " " << y);
     blocks.insert(Position(x, y));
 }
 
@@ -166,6 +167,7 @@ void Game::add_scores() {
 void Game::reset_turn() {
     dead_players.clear();
     explosions.clear();
+    destroyed_blocks.clear();
     for (auto &bomb : bombs){
         bomb.second.timer -= 1;
     }
