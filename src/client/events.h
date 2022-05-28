@@ -10,16 +10,21 @@
 #define PLAYER_MOVED 2
 #define BLOCK_PLACED 3
 
-void read_position(int socket_fd, Buffer &buf);
 
-void read_event(int socket_fd, Buffer &buf, Game &game);
+class Event {
+private:
+    static void deserialize_bomb_placed(int socket_fd, Buffer &buf, Game &game, struct sockaddr_in6 addr);
 
-void read_bomb_placed(int socket_fd, Buffer &buf, Game &game);
+    static void deserialize_bomb_exploded(int socket_fd, Buffer &buf, Game &game, struct sockaddr_in6 addr);
 
-void read_bomb_exploded(int socket_fd, Buffer &buf, Game &game);
+    static void deserialize_player_moved(int socket_fd, Buffer &buf, Game &game, struct sockaddr_in6 addr);
 
-void read_player_moved(int socket_fd, Buffer &buf, Game &game);
+    static void deserialize_block_placed(int socket_fd, Buffer &buf, Game &game, struct sockaddr_in6 addr);
 
-void read_block_placed(int socket_fd, Buffer &buf, Game &game);
+public:
+    static void deserialize_position(int socket_fd, Buffer &buf, struct sockaddr_in6 addr);
+
+    static void deserialize_event(int socket_fd, Buffer &buf, Game &game, struct sockaddr_in6 addr);
+};
 
 #endif //EVENTS_H

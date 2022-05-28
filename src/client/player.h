@@ -12,7 +12,7 @@ private:
     std::string name;
     std::string addr;
 public:
-    Player(Buffer &buf) {
+    explicit Player(Buffer &buf) {
         name = buf.read_n_bytes((size_t) buf.read_1_byte());
         addr = buf.read_n_bytes((size_t) buf.read_1_byte());
 
@@ -22,6 +22,6 @@ public:
     void generate_respond(Buffer &buf);
 };
 
-void read_player(int socket_fd, Buffer &buf);
+void deserialize_player(int socket_fd, Buffer &buf, struct sockaddr_in6 addr);
 
 #endif //PLAYER_H

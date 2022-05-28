@@ -43,12 +43,16 @@ input_params_t parse_cli_params(int argc, char **argv) {
         string server_address = vm["server-address"].as<string>();
         size_t server_port_ind = server_address.find_last_of(':');
         params.server_port = numeric_cast<port_t>(lexical_cast<int>(server_address.substr(server_port_ind + 1)));
-        params.server_host = server_address.substr(0, server_port_ind);
-        params.server_addr = get_address(&params.server_host[0], params.server_port);
+        string server_address_without_port = server_address.substr(0, server_port_ind);
+        INFO("Server address without port: " << server_address_without_port);
+        params.server_host = (char *) malloc(server_address_without_port.length() + 1);
+        strcpy(params.server_host, server_address_without_port.c_str());
+        cout << "server_host: " << params.server_host << endl;
         size_t gui_port_ind = display_address.find_last_of(':');
         params.gui_port = numeric_cast<port_t>(lexical_cast<int>(display_address.substr(gui_port_ind + 1)));
         params.gui_host = display_address.substr(0, gui_port_ind);
         params.gui_addr = get_send_address(&params.gui_host[0], params.gui_port);
+//        params.gui_addr = get_udp_address(&params.gui_host[0], params.gui_port);
         params.player_name = vm["player-name"].as<string>();
         params.port = numeric_cast<port_t>(lexical_cast<int>(vm["port"].as<string>()));
     } catch (bad_lexical_cast &e) {
@@ -72,12 +76,10 @@ input_params_t parse_cli_params(int argc, char **argv) {
     return params;
 }
 
-size_t Client::get_msg_from_gui() {
+size_t Client::get_msg_from_gui(Buffer &buf) {
     auto address_length = (socklen_t) sizeof(gui_addr);
     errno = 0;
-    ssize_t received_length = recvfrom(udp_socket_fd, buf_gui_to_server.get_buffer(), BUFFER_SIZE,
-                                       0,
-                                       (struct sockaddr *) &gui_addr,
+    ssize_t received_length = recvfrom(gui_socket_fd, buf.get_buffer(), BUFFER_SIZE, 0, (struct sockaddr *) &gui_addr,
                                        &address_length);
     if (received_length < 0) {
         PRINT_ERRNO();
@@ -85,73 +87,93 @@ size_t Client::get_msg_from_gui() {
     return (size_t) received_length;
 }
 
-void Client::send_msg_to_gui() {
-    auto address_length = (socklen_t) sizeof(gui_addr);
+void Client::send_msg_to_gui(Buffer &buf) {
     INFO("Sending message to GUI");
-    Buffer::print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
-    ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
-                                 buf_server_to_gui.get_no_written_bytes(), 0,
+    auto address_length = (socklen_t) sizeof(gui_addr);
+    errno = 0;
+//    Buffer::print_buffer(buf.get_buffer(), buf.get_no_written_bytes());
+    ssize_t sent_length = sendto(gui_socket_fd, buf.get_buffer(), buf.get_no_written_bytes(), 0,
                                  (struct sockaddr *) &gui_addr, address_length);
-    INFO("Message to GUI sent");
+    if (sent_length < 0) {
+        PRINT_ERRNO();
+    }
     ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
+    INFO("Message to GUI sent");
+
 }
 
 void Client::parse_msg_from_gui(const size_t msg_len) {
-    ENSURE(msg_len == 2 || msg_len == 1);
     INFO("Received message from GUI");
+    uint8_t msg_code = buf_gui_to_server.read_1_byte();
     if (is_game_started) {      // sends PlaceBomb or PlaceBlock or Move
-        uint8_t msg_code = buf_gui_to_server.read_1_byte();
-        if (msg_code == 2) {
-            INFO("Received MOVE");
+        if (msg_code == 0 && msg_len == 1) {
+            INFO("Received PlaceBomb");
+            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+        } else if (msg_code == 1 && msg_len == 1) {
+            INFO("Received PlaceBlock");
+            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+        } else if (msg_code == 2 && msg_len == 2) {
+            INFO("Received Move");
             uint8_t direction = buf_gui_to_server.read_1_byte();
-            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
-            buf_gui_to_server.write_into_buffer(direction);
-        } else {
-            INFO("Received PlaceBomb or PlaceBlock");
-            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+            if (direction <= 3) {
+                buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+                buf_gui_to_server.write_into_buffer(direction);
+            }
         }
-    } else {    // sends Join
-        INFO("Game not started");
-        buf_gui_to_server.reset_buffer();
-        buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
-        buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
-        buf_gui_to_server.write_into_buffer(player_name.c_str(), (size_t) player_name.size());
-        cout << "Player name: " << player_name << endl;
+    } else if (msg_code <= 2) {    // sends Join
+        if ((msg_len == 1 && (msg_code == 0 || msg_code == 1)) || msg_len == 2) {
+            if (msg_len == 2) {
+                uint8_t direction = buf_gui_to_server.read_1_byte();
+                if (direction <= 3) {
+                    buf_gui_to_server.reset_buffer();
+                    buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
+                    buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
+                    buf_gui_to_server.write_into_buffer(player_name.c_str(), (size_t) player_name.size());
+                }
+            }
+        }
     }
+    // TODO!!!
     INFO("Message to server parsed");
 }
 
 size_t Client::get_n_bytes_from_server(void *buffer, const size_t n) const {
-    errno = 0;
-    ssize_t received_length = recv(tcp_socket_fd, buffer, n, MSG_WAITALL);
-    if (received_length < 0) {
-        PRINT_ERRNO();
-    } else if (received_length == 0) {
-        INFO("Server closed connection");
-        exit(0);
-    }
-    std::cout << "Received message from server of length: " << received_length << "\n";
-    // TODO CHANGE
-//    INFO("Received message from server");
-    return (size_t) received_length;
+//    errno = 0;
+//    ssize_t received_length = recv(server_socket_fd, buffer, n, MSG_WAITALL);
+//    if (received_length < 0) {
+//        PRINT_ERRNO();
+//    } else if (received_length == 0) {
+//        INFO("Server closed connection");
+//        exit(0);
+//    }
+//    std::cout << "Received message from server of length: " << received_length << "\n";
+//    // TODO CHANGE
+////    INFO("Received message from server");
+//    return (size_t) received_length;
+    return ::get_n_bytes_from_server(server_socket_fd, buffer, n, server_addr);
 }
 
-void Client::send_msg_to_server() {
+void Client::send_msg_to_server(Buffer &buf) {
     INFO("Sending message to server");
+    auto address_length = (socklen_t) sizeof(gui_addr);
     errno = 0;
     Buffer::print_buffer(buf_gui_to_server.get_buffer(), buf_gui_to_server.get_no_written_bytes());
-    ssize_t sent_length = send(tcp_socket_fd, buf_gui_to_server.get_buffer(),
-                               buf_gui_to_server.get_no_written_bytes(), 0);
+
+
+//    ssize_t sent_length = sendto(server_socket_fd, buf.get_buffer(), buf.get_no_written_bytes(), 0,
+//                                 (struct sockaddr *) &server_addr, address_length);
+//
+    ssize_t sent_length = send(server_socket_fd, buf.get_buffer(), buf.get_no_written_bytes(), 0);
     if (sent_length < 0) {
         PRINT_ERRNO();
     }
-    ENSURE(sent_length == (ssize_t) buf_gui_to_server.get_no_written_bytes());
+    ENSURE(sent_length == (ssize_t) buf.get_no_written_bytes());
     INFO("Message to server sent");
 }
 
 void Client::read_hello(Buffer &buf) {
     char local_buf[sizeof(uint16_t)];
-    read_str(tcp_socket_fd, buf);                         // server name
+    deserialize_str(server_socket_fd, buf, sockaddr_in6());                         // server name
     get_n_bytes_from_server(local_buf, sizeof(uint8_t));
     buf.write_into_buffer(*(uint8_t *) local_buf);              // players count
     get_n_bytes_from_server(local_buf, sizeof(uint16_t));
@@ -167,11 +189,11 @@ void Client::read_hello(Buffer &buf) {
     game = Game(buf);
     buf.reset_buffer();
     game.generate_lobby_respond(buf);
-    send_msg_to_gui();
+    send_msg_to_gui(buf_server_to_gui);
 }
 
 void Client::read_accepted_player(Buffer &buf) {
-    read_player(tcp_socket_fd, buf);
+    deserialize_player(server_socket_fd, buf, server_addr);
     player_id_t player_id = buf_server_to_gui.read_1_byte();
     Player player(buf_server_to_gui);
     game.add_player(player_id, player);
@@ -198,13 +220,13 @@ void Client::read_turn(Buffer &buf) {
     get_n_bytes_from_server(local_buf, sizeof(list_len_t));
     list_len_t list_len = be32toh(*(list_len_t *) local_buf);
     for (list_len_t i = 0; i < list_len; i++) {
-        read_event(tcp_socket_fd, buf, game);
+        Event::deserialize_event(server_socket_fd, buf, game, server_addr);
     }
     game.add_scores();
     game.erase_blocks();
     game.generate_game_respond(buf);
     game.reset_turn();
-    send_msg_to_gui();
+    send_msg_to_gui(buf_server_to_gui);
 }
 
 void Client::read_game_ended(Buffer &buf) {
@@ -219,17 +241,20 @@ void Client::read_game_ended(Buffer &buf) {
     buf.reset_buffer();
     game.reset_game();
     game.generate_lobby_respond(buf);
-    send_msg_to_gui();
+    send_msg_to_gui(buf_server_to_gui);
 }
 
 [[noreturn]] void Client::gui_to_server_handler() {
     size_t msg_len;
+    int i = 0;
     do {
         buf_gui_to_server.reset_buffer();
-        msg_len = get_msg_from_gui();
+        msg_len = get_msg_from_gui(buf_gui_to_server);
         parse_msg_from_gui(msg_len);
-        send_msg_to_server();
-    } while (true);
+//        buf_gui_to_server.write_into_buffer((uint8_t) 1);
+        send_msg_to_server(buf_gui_to_server);
+//        i++;
+    } while (i < 2);
 }
 
 [[noreturn]] void Client::server_to_gui_handler() {
@@ -247,7 +272,7 @@ void Client::read_game_ended(Buffer &buf) {
             case ACCEPTED_PLAYER:
                 INFO("Received ACCEPTED_PLAYER from server");
                 read_accepted_player(buf_server_to_gui);
-                send_msg_to_gui();
+                send_msg_to_gui(buf_server_to_gui);
                 break;
             case GAME_STARTED:
                 INFO("Received GAME_STARTED from server");

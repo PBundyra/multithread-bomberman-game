@@ -104,9 +104,9 @@ inline static int accept_connection(int socket_fd, struct sockaddr_in *client_ad
     return client_fd;
 }
 
-inline static void connect_socket(int socket_fd, const struct sockaddr_in6 *address) {
-    CHECK_ERRNO(connect(socket_fd, (struct sockaddr *) address, sizeof(*address)));
-}
+//inline static void connect_socket(int socket_fd, const struct sockaddr_in6 *address) {
+//    CHECK_ERRNO(connect(socket_fd, (struct sockaddr *) address, sizeof(*address)));
+//}
 
 //inline static void send_message(int socket_fd, const void *message, size_t length, int flags) {
 //    errno = 0;
@@ -119,7 +119,7 @@ inline static void connect_socket(int socket_fd, const struct sockaddr_in6 *addr
 inline static struct sockaddr_in6 get_send_address(const char *host, uint16_t port) {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET6; // IPv4
+    hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
 
@@ -127,7 +127,7 @@ inline static struct sockaddr_in6 get_send_address(const char *host, uint16_t po
     CHECK(getaddrinfo(host, nullptr, &hints, &address_result));
 
     struct sockaddr_in6 send_address;
-    send_address.sin6_family = AF_INET6; // IPv4
+    send_address.sin6_family = AF_INET; // IPv4
     send_address.sin6_addr = in6addr_any;
 //    send_address.sin6_addr.s_addr =
 //            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address

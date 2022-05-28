@@ -1,11 +1,11 @@
 #include "player.h"
 
-void read_player(int socket_fd, Buffer &buf) {
+void deserialize_player(int socket_fd, Buffer &buf, struct sockaddr_in6 addr) {
     char buffer[sizeof(player_id_t)];
-    get_n_bytes_from_server(socket_fd, buffer, sizeof(player_id_t));
+    get_n_bytes_from_server(socket_fd, buffer, sizeof(player_id_t), addr);
     buf.write_into_buffer((player_id_t) buffer[0]);                 // player id
-    read_str(socket_fd, buf);                                         // player name
-    read_str(socket_fd, buf);                                         // player address
+    deserialize_str(socket_fd, buf, sockaddr_in6());                                         // player name
+    deserialize_str(socket_fd, buf, sockaddr_in6());                                         // player address
 }
 
 void Player::generate_respond(Buffer &buf){
