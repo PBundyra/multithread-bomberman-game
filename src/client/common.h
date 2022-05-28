@@ -23,22 +23,27 @@ inline static uint16_t read_port(char *string) {
     return (uint16_t) port;
 }
 
-inline static struct sockaddr_in6 get_address(char *host, uint16_t port) {
+inline static struct sockaddr_in get_address(char *host, uint16_t port) {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET6; // IPv4
+    hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
     struct addrinfo *address_result;
     CHECK(getaddrinfo(host, NULL, &hints, &address_result));
 
-    struct sockaddr_in6 address;
-    address.sin6_family = AF_INET6; // IPv4
-    address.sin6_addr = in6addr_any;
+//    struct sockaddr_in6 address;
+//    address.sin6_family = AF_INET6; // IPv4
+//    address.sin6_addr = in6addr_any;
 //    .s_addr =
 //            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-    address.sin6_port = htons(port);
+//    address.sin6_port = htons(port);
+    struct sockaddr_in address;
+    address.sin_family = AF_INET; // IPv4
+    address.sin_addr =
+            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr; // IP address
+    address.sin_port = htons(port);
 
     freeaddrinfo(address_result);
 
@@ -94,7 +99,7 @@ inline static char *get_ip(struct sockaddr_in *address) {
 inline static int accept_connection(int socket_fd, struct sockaddr_in *client_address) {
     socklen_t
             client_address_length = (socklen_t)
-    sizeof(*client_address);
+            sizeof(*client_address);
 
     int client_fd = accept(socket_fd, (struct sockaddr *) &client_address, &client_address_length);
     if (client_fd < 0) {
@@ -104,7 +109,7 @@ inline static int accept_connection(int socket_fd, struct sockaddr_in *client_ad
     return client_fd;
 }
 
-inline static void connect_socket(int socket_fd, const struct sockaddr_in6 *address) {
+inline static void connect_socket(int socket_fd, const struct sockaddr_in *address) {
     CHECK_ERRNO(connect(socket_fd, (struct sockaddr *) address, sizeof(*address)));
 }
 
@@ -116,33 +121,39 @@ inline static void connect_socket(int socket_fd, const struct sockaddr_in6 *addr
 //    }
 //    ENSURE(sent_length == (ssize_t) length);
 //}
-inline static struct sockaddr_in6 get_send_address(const char *host, uint16_t port) {
+inline static struct sockaddr_in get_send_address(const char *host, uint16_t port) {
     struct addrinfo hints;
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET6; // IPv4
+//    hints.ai_family = AF_INET6; // IPv4
+    hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
 
     struct addrinfo *address_result;
     CHECK(getaddrinfo(host, nullptr, &hints, &address_result));
 
-    struct sockaddr_in6 send_address;
-    send_address.sin6_family = AF_INET6; // IPv4
-    send_address.sin6_addr = in6addr_any;
+//    struct sockaddr_in6 send_address;
+//    send_address.sin6_family = AF_INET6; // IPv4
+//    send_address.sin6_addr = in6addr_any;
 //    send_address.sin6_addr.s_addr =
 //            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-    send_address.sin6_port = htons(port); // port from the command line
+//    send_address.sin6_port = htons(port); // port from the command line
+    struct sockaddr_in address;
+    address.sin_family = AF_INET; // IPv4
+    address.sin_addr.s_addr =
+            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
+    address.sin_port = htons(port);
 
     freeaddrinfo(address_result);
 
-    return send_address;
+    return address;
 }
 
 inline static void
 send_message(int socket_fd, const struct sockaddr_in *client_address, const char *message, size_t length) {
     socklen_t
             address_length = (socklen_t)
-    sizeof(*client_address);
+            sizeof(*client_address);
     int flags = 0;
     ssize_t sent_length = sendto(socket_fd, message, length, flags,
                                  (struct sockaddr *) client_address, address_length);

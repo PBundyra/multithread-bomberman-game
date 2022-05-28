@@ -43,8 +43,8 @@ typedef struct input_params_t {
     std::string gui_host;
     port_t server_port;
     std::string server_host;
-    struct sockaddr_in6 server_addr;
-    struct sockaddr_in6 gui_addr;
+    struct sockaddr_in server_addr;
+    struct sockaddr_in gui_addr;
 } input_params_t;
 
 input_params_t parse_cli_params(int argc, char **argv);
@@ -57,8 +57,8 @@ private:
     std::string gui_host;
     port_t server_port;
     std::string server_host;
-    struct sockaddr_in6 server_addr;
-    struct sockaddr_in6 gui_addr;
+    struct sockaddr_in server_addr;
+    struct sockaddr_in gui_addr;
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;

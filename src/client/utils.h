@@ -38,7 +38,7 @@ int bind_tcp_socket(port_t port);
 void read_str(int socket_fd, Buffer &buf);
 
 inline static int open_tcp_socket() {
-    int socket_fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    int socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socket_fd < 0) {
         PRINT_ERRNO();
     }
@@ -47,7 +47,7 @@ inline static int open_tcp_socket() {
 }
 
 inline static int open_udp_ip6_socket() {
-    int socket_fd = socket(AF_INET6, SOCK_DGRAM, 0);
+    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (socket_fd < 0) {
         PRINT_ERRNO();
     }
@@ -56,12 +56,19 @@ inline static int open_udp_ip6_socket() {
 }
 
 inline static void bind_ip6_socket(int socket_fd, uint16_t port) {
-    struct sockaddr_in6 address;
-    address.sin6_family = AF_INET6;
-    address.sin6_flowinfo = 0;
-    address.sin6_addr = in6addr_any;
-    address.sin6_port = htons(port);
-    address.sin6_scope_id = 0;
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
+    address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+
+
+//    struct sockaddr_in6 address;
+//    address.sin6_family = AF_INET6;
+//    address.sin6_flowinfo = 0;
+//    address.sin6_addr = in6addr_any;
+//    address.sin6_port = htons(port);
+//    address.sin6_scope_id = 0;
     CHECK_ERRNO(bind(socket_fd, (struct sockaddr *) &address,
                      (socklen_t) sizeof(address)));
 }
