@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <cstring>
+#include <netdb.h>
 
 #include "buffer.h"
 #include "err.h"
@@ -75,6 +76,34 @@ inline static void bind_ip6_socket(int socket_fd, uint16_t port) {
 //    address.sin6_scope_id = 0;
     CHECK_ERRNO(bind(socket_fd, (struct sockaddr *) &address,
                      (socklen_t) sizeof(address)));
+}
+
+inline static struct sockaddr_in6 get_send_address(const char *host, uint16_t port) {
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(struct addrinfo));
+//    hints.ai_family = AF_INET6; // IPv4
+//    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_protocol = IPPROTO_UDP;
+
+    struct addrinfo *address_result;
+    CHECK(getaddrinfo(host, nullptr, &hints, &address_result));
+
+    struct sockaddr_in6 send_address;
+    send_address.sin6_family = AF_INET6; // IPv4
+    send_address.sin6_addr = in6addr_any;
+    send_address.sin6_addr =
+            ((struct sockaddr_in6 *) (address_result->ai_addr))->sin6_addr; // IP address
+    send_address.sin6_port = htons(port); // port from the command line
+//    struct sockaddr_in address;
+//    address.sin_family = AF_INET; // IPv4
+//    address.sin_addr.s_addr =
+//            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
+//    address.sin_port = htons(port);
+
+    freeaddrinfo(address_result);
+
+    return send_address;
 }
 
 

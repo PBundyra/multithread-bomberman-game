@@ -28,13 +28,19 @@ size_t get_n_bytes_from_server(int socket_fd, void *buffer, const size_t n) {
 //    return socket_fd;
 //}
 int bind_udp_socket(port_t port) {
-    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0); // creating IPv4 UDP socket
+//    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0); // creating IPv4 UDP socket
+    int socket_fd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
     ENSURE(socket_fd > 0);
 
-    struct sockaddr_in server_address{};
-    server_address.sin_family = AF_INET; // IPv4
-    server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
-    server_address.sin_port = htons(port);
+//    struct sockaddr_in server_address{};
+//    server_address.sin_family = AF_INET; // IPv4
+//    server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
+//    server_address.sin_port = htons(port);
+    struct sockaddr_in6 server_address{};
+    memset(&server_address, 0, sizeof(server_address));
+    server_address.sin6_family = 0; // IPv6
+    server_address.sin6_addr = in6addr_any; // listening on all interfaces
+    server_address.sin6_port = htons(port);
 
     CHECK_ERRNO(bind(socket_fd, (struct sockaddr *) &server_address,
                      (socklen_t) sizeof(server_address)));

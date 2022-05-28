@@ -121,33 +121,7 @@ inline static void connect_socket(int socket_fd, const struct sockaddr_in *addre
 //    }
 //    ENSURE(sent_length == (ssize_t) length);
 //}
-inline static struct sockaddr_in get_send_address(const char *host, uint16_t port) {
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(struct addrinfo));
-//    hints.ai_family = AF_INET6; // IPv4
-    hints.ai_family = AF_INET; // IPv4
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = IPPROTO_UDP;
 
-    struct addrinfo *address_result;
-    CHECK(getaddrinfo(host, nullptr, &hints, &address_result));
-
-//    struct sockaddr_in6 send_address;
-//    send_address.sin6_family = AF_INET6; // IPv4
-//    send_address.sin6_addr = in6addr_any;
-//    send_address.sin6_addr.s_addr =
-//            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-//    send_address.sin6_port = htons(port); // port from the command line
-    struct sockaddr_in address;
-    address.sin_family = AF_INET; // IPv4
-    address.sin_addr.s_addr =
-            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-    address.sin_port = htons(port);
-
-    freeaddrinfo(address_result);
-
-    return address;
-}
 
 inline static void
 send_message(int socket_fd, const struct sockaddr_in *client_address, const char *message, size_t length) {

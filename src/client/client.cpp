@@ -108,7 +108,7 @@ void Client::send_msg_to_gui() {
                                  buf_server_to_gui.get_no_written_bytes(), 0,
                                  (struct sockaddr *) &gui_addr, address_length);
     INFO("Message to GUI sent");
-    ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
+//    ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
 }
 
 void Client::parse_msg_from_gui(const size_t msg_len) {
@@ -136,18 +136,18 @@ void Client::parse_msg_from_gui(const size_t msg_len) {
     INFO("Message to server parsed");
 }
 
-size_t Client::get_n_bytes_from_server(void *buffer, const size_t n) const {
-    errno = 0;
-    ssize_t received_length = recv(tcp_socket_fd, buffer, n, MSG_WAITALL);
-    if (received_length < 0) {
-        PRINT_ERRNO();
-    } else if (received_length == 0) {
-        INFO("Server closed connection");
-        exit(0);
-    }
-    INFO ("Received " << received_length << " bytes from server");
-    return (size_t) received_length;
-}
+//size_t Client::get_n_bytes_from_server(tcp_socket_fd,void *buffer, const size_t n) const {
+//    errno = 0;
+//    ssize_t received_length = recv(tcp_socket_fd, buffer, n, MSG_WAITALL);
+//    if (received_length < 0) {
+//        PRINT_ERRNO();
+//    } else if (received_length == 0) {
+//        INFO("Server closed connection");
+//        exit(0);
+//    }
+//    INFO ("Received " << received_length << " bytes from server");
+//    return (size_t) received_length;
+//}
 
 void Client::send_msg_to_server() {
     INFO("Sending message to server");
@@ -165,17 +165,17 @@ void Client::send_msg_to_server() {
 void Client::handle_hello_msg(Buffer &buf) {
     char local_buf[sizeof(uint16_t)];
     read_str(tcp_socket_fd, buf);                         // server name
-    get_n_bytes_from_server(local_buf, sizeof(uint8_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint8_t));
     buf.write_into_buffer(*(uint8_t *) local_buf);              // players count
-    get_n_bytes_from_server(local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // size x
-    get_n_bytes_from_server(local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // size y
-    get_n_bytes_from_server(local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // game length
-    get_n_bytes_from_server(local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // explosion radius
-    get_n_bytes_from_server(local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // bomb timer
     game = Game(buf);
     buf.reset_buffer();
@@ -193,7 +193,7 @@ void Client::handle_accepted_player_msg(Buffer &buf) {
 
 void Client::handle_game_started_msg(Buffer &buf) {
     char buffer[sizeof(map_len_t)];
-    get_n_bytes_from_server(buffer, sizeof(map_len_t));
+    get_n_bytes_from_server(tcp_socket_fd,buffer, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) buffer);
     for (map_len_t i = 0; i < map_len; i++) {
         buf.reset_buffer();
@@ -204,10 +204,10 @@ void Client::handle_game_started_msg(Buffer &buf) {
 
 void Client::handle_turn_msg(Buffer &buf) {
     char local_buf[sizeof(list_len_t)];
-    get_n_bytes_from_server(local_buf, sizeof(turn_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(turn_t));
     turn_t turn = be16toh(*(turn_t *) local_buf);
     game.set_turn(turn);
-    get_n_bytes_from_server(local_buf, sizeof(list_len_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(list_len_t));
     list_len_t list_len = be32toh(*(list_len_t *) local_buf);
     for (list_len_t i = 0; i < list_len; i++) {
         deserialize_event(tcp_socket_fd, buf, game);
@@ -220,11 +220,11 @@ void Client::handle_turn_msg(Buffer &buf) {
 
 void Client::handle_game_ended_msg(Buffer &buf) {
     char local_buf[sizeof(map_len_t)];
-    get_n_bytes_from_server(local_buf, sizeof(map_len_t));
+    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) local_buf);
     for (map_len_t i = 0; i < map_len; i++) {
-        get_n_bytes_from_server(local_buf, sizeof(player_id_t));
-        get_n_bytes_from_server(local_buf, sizeof(score_t));
+        get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(player_id_t));
+        get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(score_t));
     }
     is_game_started = false;
     buf.reset_buffer();
@@ -247,7 +247,7 @@ void Client::handle_game_ended_msg(Buffer &buf) {
     do {
         buf_server_to_gui.reset_buffer();
         INFO("Waiting for message from server");
-        get_n_bytes_from_server(local_buf, 1);
+        get_n_bytes_from_server(tcp_socket_fd,local_buf, 1);
         INFO("Received message from server");
         switch (local_buf[0]) {
             case HELLO:
