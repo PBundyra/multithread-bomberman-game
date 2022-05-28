@@ -1,8 +1,25 @@
+#include <boost/program_options.hpp>
+#include <boost/numeric/conversion/cast.hpp>
+#include <boost/lexical_cast.hpp>
+#include <iostream>
+#include <cstring>
+#include <cerrno>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <thread>
+
 #include "client.h"
+#include "events.h"
+#include "player.h"
+#include "err.h"
+
 
 namespace po = boost::program_options;
-namespace asio = boost::asio;
-namespace ip = asio::ip;
 using namespace std;
 using boost::numeric_cast;
 using boost::numeric::bad_numeric_cast;
@@ -10,17 +27,15 @@ using boost::numeric::positive_overflow;
 using boost::numeric::negative_overflow;
 using boost::lexical_cast;
 using boost::bad_lexical_cast;
-using boost::asio::ip::tcp;
-using boost::asio::ip::udp;
-using boost::asio::ip::address;
 
-#define JOIN 0
-#define HELLO 0
-#define ACCEPTED_PLAYER 1
-#define GAME_STARTED 2
-#define TURN 3
-#define GAME_ENDED 4
-
+enum msg_codes {
+    JOIN = 0,
+    HELLO = 0,
+    ACCEPTED_PLAYER = 1,
+    GAME_STARTED = 2,
+    TURN = 3,
+    GAME_ENDED = 4
+};
 
 input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
@@ -147,7 +162,7 @@ void Client::send_msg_to_server() {
     INFO("Message to server sent");
 }
 
-void Client::read_hello(Buffer &buf) {
+void Client::handle_hello_msg(Buffer &buf) {
     char local_buf[sizeof(uint16_t)];
     read_str(tcp_socket_fd, buf);                         // server name
     get_n_bytes_from_server(local_buf, sizeof(uint8_t));
@@ -165,10 +180,9 @@ void Client::read_hello(Buffer &buf) {
     game = Game(buf);
     buf.reset_buffer();
     game.serialize_lobby_respond(buf);
-    send_msg_to_gui();
 }
 
-void Client::read_accepted_player(Buffer &buf) {
+void Client::handle_accepted_player_msg(Buffer &buf) {
     Player::read_player(tcp_socket_fd, buf);
     player_id_t player_id = buf_server_to_gui.read_1_byte();
     Player player(buf_server_to_gui);
@@ -177,18 +191,18 @@ void Client::read_accepted_player(Buffer &buf) {
     game.serialize_lobby_respond(buf);
 }
 
-void Client::read_game_started(Buffer &buf) {
+void Client::handle_game_started_msg(Buffer &buf) {
     char buffer[sizeof(map_len_t)];
     get_n_bytes_from_server(buffer, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) buffer);
     for (map_len_t i = 0; i < map_len; i++) {
         buf.reset_buffer();
-        read_accepted_player(buf);
+        handle_accepted_player_msg(buf);
     }
     is_game_started = true;
 }
 
-void Client::read_turn(Buffer &buf) {
+void Client::handle_turn_msg(Buffer &buf) {
     char local_buf[sizeof(list_len_t)];
     get_n_bytes_from_server(local_buf, sizeof(turn_t));
     turn_t turn = be16toh(*(turn_t *) local_buf);
@@ -202,10 +216,9 @@ void Client::read_turn(Buffer &buf) {
     game.erase_destroyed_blocks();
     game.serialize_game_respond(buf);
     game.reset_turn();
-    send_msg_to_gui();
 }
 
-void Client::read_game_ended(Buffer &buf) {
+void Client::handle_game_ended_msg(Buffer &buf) {
     char local_buf[sizeof(map_len_t)];
     get_n_bytes_from_server(local_buf, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) local_buf);
@@ -217,7 +230,6 @@ void Client::read_game_ended(Buffer &buf) {
     buf.reset_buffer();
     game.reset_game();
     game.serialize_lobby_respond(buf);
-    send_msg_to_gui();
 }
 
 [[noreturn]] void Client::gui_to_server_handler() {
@@ -239,25 +251,28 @@ void Client::read_game_ended(Buffer &buf) {
         INFO("Received message from server");
         switch (local_buf[0]) {
             case HELLO:
-                INFO("Received HELLO from server");
-                read_hello(buf_server_to_gui);
+                INFO("Received Hello from server");
+                handle_hello_msg(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             case ACCEPTED_PLAYER:
-                INFO("Received ACCEPTED_PLAYER from server");
-                read_accepted_player(buf_server_to_gui);
+                INFO("Received Accepted Player from server");
+                handle_accepted_player_msg(buf_server_to_gui);
                 send_msg_to_gui();
                 break;
             case GAME_STARTED:
-                INFO("Received GAME_STARTED from server");
-                read_game_started(buf_server_to_gui);
+                INFO("Received Game Started from server");
+                handle_game_started_msg(buf_server_to_gui);
                 break;
             case TURN:
-                INFO("Received TURN from server");
-                read_turn(buf_server_to_gui);
+                INFO("Received Turn from server");
+                handle_turn_msg(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             case GAME_ENDED:
-                INFO("Received GAME_ENDED from server");
-                read_game_ended(buf_server_to_gui);
+                INFO("Received Game Ended from server");
+                handle_game_ended_msg(buf_server_to_gui);
+                send_msg_to_gui();
                 break;
             default:
                 fatal("Received unknown message from server");

@@ -1,40 +1,10 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <boost/program_options.hpp>
-#include <boost/asio.hpp>
-#include <boost/numeric/conversion/cast.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <iostream>
-#include <cstring>
-#include <limits>
-#include <iostream>
-#include <sstream>
-#include <bitset>
-#include <arpa/inet.h>
-#include <cerrno>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <utility>
-#include <atomic>
-
 #include "buffer.h"
-#include "events.h"
-#include "game.h"
-#include "player.h"
 #include "utils.h"
-#include "err.h"
 #include "common.h"
+#include "game.h"
 
 typedef struct input_params_t {
     port_t port;
@@ -67,15 +37,15 @@ private:
     int tcp_socket_fd;
     int udp_socket_fd;
 
-    void read_hello(Buffer &buf);
+    void handle_hello_msg(Buffer &buf);
 
-    void read_accepted_player(Buffer &buf);
+    void handle_accepted_player_msg(Buffer &buf);
 
-    void read_game_started(Buffer &buf);
+    void handle_game_started_msg(Buffer &buf);
 
-    void read_turn(Buffer &buf);
+    void handle_turn_msg(Buffer &buf);
 
-    void read_game_ended(Buffer &buf);
+    void handle_game_ended_msg(Buffer &buf);
 
     size_t get_msg_from_gui();
 
