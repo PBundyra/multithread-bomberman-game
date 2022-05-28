@@ -1,7 +1,7 @@
 #include "buffer.h"
 
 #include <bitset>
-// TODO remove
+// TODO zastanowic sie nad includami
 
 char *Buffer::get_buffer() {
     return buffer;

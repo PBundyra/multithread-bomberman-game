@@ -5,9 +5,9 @@ using namespace std;
 void read_position(int socket_fd, Buffer &buf) {
     char buffer[sizeof(uint16_t)];
     get_n_bytes_from_server(socket_fd, buffer, sizeof(uint16_t)); // Position.x
-    buf.write_into_buffer(be16toh(*(uint16_t *) buffer));
+    buf.write_into_buffer(*(uint16_t *) buffer);
     get_n_bytes_from_server(socket_fd, buffer, sizeof(uint16_t)); // Position.y
-    buf.write_into_buffer(be16toh(*(uint16_t *) buffer));
+    buf.write_into_buffer(*(uint16_t *) buffer);
 }
 
 
@@ -42,7 +42,7 @@ void read_event(int socket_fd, Buffer &buf, Game &game) {
 void read_bomb_placed(int socket_fd, Buffer &buf, Game &game) {
     char local_buf[BUFFER_SIZE];
     get_n_bytes_from_server(socket_fd, local_buf, sizeof(bomb_id_t));
-    buf.write_into_buffer(be32toh(*(bomb_id_t *) local_buf));
+    buf.write_into_buffer(*(bomb_id_t *) local_buf);
     read_position(socket_fd, buf);
     game.place_bomb(buf);
 }
@@ -50,20 +50,21 @@ void read_bomb_placed(int socket_fd, Buffer &buf, Game &game) {
 void read_bomb_exploded(int socket_fd, Buffer &buf, Game &game) {
     char local_buf[BUFFER_SIZE];
     get_n_bytes_from_server(socket_fd, local_buf, sizeof(bomb_id_t));
-    buf.write_into_buffer(be32toh(*(bomb_id_t *) local_buf));
+    buf.write_into_buffer(*(bomb_id_t *) local_buf);
     game.explode_bomb(buf);
     get_n_bytes_from_server(socket_fd, local_buf, sizeof(list_len_t));  // list of destroyed robots
-    list_len_t list_size = be32toh(*(list_len_t *) local_buf);
+    list_len_t list_len = be32toh(*(uint32_t *) local_buf);
     buf.reset_buffer();
-    for (list_len_t i = 0; i < list_size; i++) {
+    for (list_len_t i = 0; i < list_len; i++) {
         get_n_bytes_from_server(socket_fd, local_buf, sizeof(player_id_t));
         buf.write_into_buffer(*(player_id_t *) local_buf);
         game.kill_player(buf);
     }
-    get_n_bytes_from_server(socket_fd, local_buf, sizeof(list_len_t));  // list of destroyed blocks
-    list_size = be32toh(*(list_len_t *) local_buf);
     buf.reset_buffer();
-    for (list_len_t i = 0; i < list_size; i++) {
+    get_n_bytes_from_server(socket_fd, local_buf, sizeof(list_len_t));  // list of destroyed blocks
+    list_len = be32toh(*(uint32_t *) local_buf);
+    buf.reset_buffer();
+    for (list_len_t i = 0; i < list_len; i++) {
         read_position(socket_fd, buf);
         game.destroy_block(buf);
     }
