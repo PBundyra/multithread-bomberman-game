@@ -85,7 +85,7 @@ void deserialize_event(int socket_fd, Buffer &buf, Game &game) {
             read_block_placed(socket_fd, buf, game);
             break;
         default:
-            fatal("Received unknown event");
+            Err::fatal("Received unknown event");
             break;
     }
 }

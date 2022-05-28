@@ -2,10 +2,8 @@
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/lexical_cast.hpp>
 #include <iostream>
-#include <cstring>
 #include <cerrno>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <sys/socket.h>
@@ -39,7 +37,7 @@ enum msg_codes {
 
 input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
-    po::options_description desc("Allowed options");
+    po::options_description desc("In order to suppress logging compile with -DNDEBUG option.\nAllowed options");
     desc.add_options()
             ("help,h", "produce help message")
             ("display-address,d", po::value<string>()->required(), "Set the display address")
@@ -50,7 +48,7 @@ input_params_t parse_cli_params(int argc, char **argv) {
     po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
     if (vm.count("help")) {
         cout << desc << "\n";
-        exit(0);
+        exit(EXIT_SUCCESS);
     }
     po::notify(vm);
     try {
@@ -68,114 +66,123 @@ input_params_t parse_cli_params(int argc, char **argv) {
         params.port = numeric_cast<port_t>(lexical_cast<int>(vm["port"].as<string>()));
     } catch (bad_lexical_cast &e) {
         cerr << "Invalid port number" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     } catch (positive_overflow &e) {
         cerr << "Port number out of range\n";
         cerr << "Error: " << e.what() << "\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     } catch (negative_overflow &e) {
         cerr << "Port number out of range\n";
         cerr << "Error: " << e.what() << "\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     } catch (const bad_numeric_cast &e) {
         cerr << "Error: " << e.what() << "\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     } catch (const exception &e) {
         cerr << "Error: " << e.what() << "\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     return params;
 }
 
 size_t Client::get_msg_from_gui() {
-    auto address_length = (socklen_t) sizeof(gui_addr);
+    auto address_length = (socklen_t)
+            sizeof(gui_addr);
     errno = 0;
     ssize_t received_length = recvfrom(udp_socket_fd, buf_gui_to_server.get_buffer(), BUFFER_SIZE,
                                        0,
                                        (struct sockaddr *) &gui_addr,
                                        &address_length);
     if (received_length < 0) {
-        PRINT_ERRNO();
+        Err::print_errno();
     }
     return (size_t) received_length;
 }
 
 void Client::send_msg_to_gui() {
-    auto address_length = (socklen_t) sizeof(gui_addr);
+    auto address_length = (socklen_t)
+            sizeof(gui_addr);
     INFO("Sending message to GUI");
     Buffer::print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
     ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
                                  buf_server_to_gui.get_no_written_bytes(), 0,
                                  (struct sockaddr *) &gui_addr, address_length);
     INFO("Message to GUI sent");
-//    ENSURE(sent_length == (ssize_t) buf_server_to_gui.get_no_written_bytes());
+    if (sent_length < 0) {
+        Err::print_errno();
+    }
 }
 
 void Client::parse_msg_from_gui(const size_t msg_len) {
-    ENSURE(msg_len == 2 || msg_len == 1);
+    Err::ensure(msg_len == 2 || msg_len == 1);
     INFO("Received message from GUI");
-    if (is_game_started) {      // sends PlaceBomb or PlaceBlock or Move
-        uint8_t msg_code = buf_gui_to_server.read_1_byte();
-        if (msg_code == 2) {
-            INFO("Received MOVE");
+    uint8_t msg_code = buf_gui_to_server.read_1_byte();
+    if (is_game_started) {      // checks if the message from gui is valid and  sends PlaceBomb or PlaceBlock or Move
+        if (msg_code == 0 && msg_len == 1) {
+            INFO("Received PlaceBomb");
+            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+        } else if (msg_code == 1 && msg_len == 1) {
+            INFO("Received PlaceBlock");
+            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+        } else if (msg_code == 2 && msg_len == 2) {
+            INFO("Received Move");
             uint8_t direction = buf_gui_to_server.read_1_byte();
-            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
-            buf_gui_to_server.write_into_buffer(direction);
+            if (direction < 4) {
+                buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+                buf_gui_to_server.write_into_buffer(direction);
+            } else {
+                INFO("Invalid direction received");
+            }
         } else {
-            INFO("Received PlaceBomb or PlaceBlock");
-            buf_gui_to_server.write_into_buffer((uint8_t) (msg_code + 1));
+            INFO("Invalid message received");
         }
-    } else {    // sends Join
-        INFO("Game not started");
-        buf_gui_to_server.reset_buffer();
-        buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
-        buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
-        buf_gui_to_server.write_into_buffer(player_name.c_str(), (size_t) player_name.size());
-        INFO("Player name:" << player_name);
+    } else {        // checks if the message from gui is valid and sends Join
+        if ((msg_len == 1 && (msg_code == 0 || msg_code == 1)) || (msg_len == 2 && msg_code == 2)) {
+            if (msg_code == 2) {
+                uint8_t direction = buf_gui_to_server.read_1_byte();
+                if (direction > 3) {
+                    INFO("Invalid direction received");
+                    return;
+                }
+            }
+            buf_gui_to_server.reset_buffer();
+            buf_gui_to_server.write_into_buffer((uint8_t) JOIN);
+            buf_gui_to_server.write_into_buffer((uint8_t) player_name.size());
+            buf_gui_to_server.write_into_buffer(player_name.c_str(), (size_t) player_name.size());
+        }
+        INFO("Invalid message received");
     }
-    INFO("Message to server parsed");
 }
 
-//size_t Client::get_n_bytes_from_server(tcp_socket_fd,void *buffer, const size_t n) const {
-//    errno = 0;
-//    ssize_t received_length = recv(tcp_socket_fd, buffer, n, MSG_WAITALL);
-//    if (received_length < 0) {
-//        PRINT_ERRNO();
-//    } else if (received_length == 0) {
-//        INFO("Server closed connection");
-//        exit(0);
-//    }
-//    INFO ("Received " << received_length << " bytes from server");
-//    return (size_t) received_length;
-//}
-
 void Client::send_msg_to_server() {
-    INFO("Sending message to server");
-    errno = 0;
-    Buffer::print_buffer(buf_gui_to_server.get_buffer(), buf_gui_to_server.get_no_written_bytes());
-    ssize_t sent_length = send(tcp_socket_fd, buf_gui_to_server.get_buffer(),
-                               buf_gui_to_server.get_no_written_bytes(), 0);
-    if (sent_length < 0) {
-        PRINT_ERRNO();
+    if (buf_gui_to_server.get_no_written_bytes() > 0) {
+        INFO("Sending message to server");
+        errno = 0;
+        Buffer::print_buffer(buf_gui_to_server.get_buffer(), buf_gui_to_server.get_no_written_bytes());
+        ssize_t sent_length = send(tcp_socket_fd, buf_gui_to_server.get_buffer(),
+                                   buf_gui_to_server.get_no_written_bytes(), 0);
+        if (sent_length < 0) {
+            Err::print_errno();
+        }
+        Err::ensure(sent_length == (ssize_t) buf_gui_to_server.get_no_written_bytes());
+        INFO("Message to server sent");
     }
-    ENSURE(sent_length == (ssize_t) buf_gui_to_server.get_no_written_bytes());
-    INFO("Message to server sent");
 }
 
 void Client::handle_hello_msg(Buffer &buf) {
     char local_buf[sizeof(uint16_t)];
     read_str(tcp_socket_fd, buf);                         // server name
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint8_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint8_t));
     buf.write_into_buffer(*(uint8_t *) local_buf);              // players count
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // size x
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // size y
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // game length
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // explosion radius
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // bomb timer
     game = Game(buf);
     buf.reset_buffer();
@@ -193,7 +200,7 @@ void Client::handle_accepted_player_msg(Buffer &buf) {
 
 void Client::handle_game_started_msg(Buffer &buf) {
     char buffer[sizeof(map_len_t)];
-    get_n_bytes_from_server(tcp_socket_fd,buffer, sizeof(map_len_t));
+    get_n_bytes_from_server(tcp_socket_fd, buffer, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) buffer);
     for (map_len_t i = 0; i < map_len; i++) {
         buf.reset_buffer();
@@ -204,10 +211,10 @@ void Client::handle_game_started_msg(Buffer &buf) {
 
 void Client::handle_turn_msg(Buffer &buf) {
     char local_buf[sizeof(list_len_t)];
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(turn_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(turn_t));
     turn_t turn = be16toh(*(turn_t *) local_buf);
     game.set_turn(turn);
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(list_len_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(list_len_t));
     list_len_t list_len = be32toh(*(list_len_t *) local_buf);
     for (list_len_t i = 0; i < list_len; i++) {
         deserialize_event(tcp_socket_fd, buf, game);
@@ -220,11 +227,11 @@ void Client::handle_turn_msg(Buffer &buf) {
 
 void Client::handle_game_ended_msg(Buffer &buf) {
     char local_buf[sizeof(map_len_t)];
-    get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(map_len_t));
+    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) local_buf);
     for (map_len_t i = 0; i < map_len; i++) {
-        get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(player_id_t));
-        get_n_bytes_from_server(tcp_socket_fd,local_buf, sizeof(score_t));
+        get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(player_id_t));
+        get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(score_t));
     }
     is_game_started = false;
     buf.reset_buffer();
@@ -247,7 +254,7 @@ void Client::handle_game_ended_msg(Buffer &buf) {
     do {
         buf_server_to_gui.reset_buffer();
         INFO("Waiting for message from server");
-        get_n_bytes_from_server(tcp_socket_fd,local_buf, 1);
+        get_n_bytes_from_server(tcp_socket_fd, local_buf, 1);
         INFO("Received message from server");
         switch (local_buf[0]) {
             case HELLO:
@@ -275,7 +282,7 @@ void Client::handle_game_ended_msg(Buffer &buf) {
                 send_msg_to_gui();
                 break;
             default:
-                fatal("Received unknown message from server");
+                Err::fatal("Received unknown message from server");
                 break;
         }
     } while (true);

@@ -3,7 +3,6 @@
 
 #include "buffer.h"
 #include "utils.h"
-#include "common.h"
 #include "game.h"
 
 typedef struct input_params_t {
@@ -14,7 +13,7 @@ typedef struct input_params_t {
     port_t server_port;
     std::string server_host;
     struct sockaddr_in server_addr;
-    struct sockaddr_in6 gui_addr;
+    struct sockaddr_in gui_addr;
 } input_params_t;
 
 input_params_t parse_cli_params(int argc, char **argv);
@@ -28,7 +27,7 @@ private:
     port_t server_port;
     std::string server_host;
     struct sockaddr_in server_addr;
-    struct sockaddr_in6 gui_addr;
+    struct sockaddr_in gui_addr;
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
@@ -53,8 +52,6 @@ private:
 
     void parse_msg_from_gui(size_t msg_len);
 
-//    size_t get_n_bytes_from_server(void *buffer, size_t n) const;
-
     void send_msg_to_server();
 
     [[noreturn]] void gui_to_server_handler();
@@ -72,7 +69,8 @@ public:
         tcp_socket_fd = open_tcp_socket();
         connect_socket(tcp_socket_fd, &input_params.server_addr);
         INFO("Connected to server");
-        udp_socket_fd = bind_udp_socket(port);
+        udp_socket_fd = open_udp_ip6_socket();
+        bind_ip6_socket(udp_socket_fd, input_params.port);
         INFO("Connected to GUI");
     }
 

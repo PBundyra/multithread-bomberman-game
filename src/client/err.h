@@ -6,61 +6,39 @@
 #include <cstdarg>
 #include <cerrno>
 
-// Evaluate `x`: if non-zero, describe it as a standard error code and exit with an error.
-#define CHECK(x)                                                          \
-    do {                                                                  \
-        int err = (x);                                                    \
-        if (err != 0) {                                                   \
-            fprintf(stderr, "Error: %s returned %d in %s at %s:%d\n%s\n", \
-                #x, err, __func__, __FILE__, __LINE__, strerror(err));    \
-            exit(EXIT_FAILURE);                                           \
-        }                                                                 \
-    } while (0)
+class Err {
+public:
+    // Evaluate `x`: if false, print an error message and exit with an error.
+    static void ensure(bool x) {
+        if (!x) {
+            std::cerr << "Error: the statement was false in " << __func__ << "at " << __FILE__ << ":" << __LINE__
+                      << "\n";
+            exit(EXIT_FAILURE);
+        }
+    }
 
-// Evaluate `x`: if false, print an error message and exit with an error.
-#define ENSURE(x)                                                         \
-    do {                                                                  \
-        bool result = (x);                                                \
-        if (!result) {                                                    \
-            fprintf(stderr, "Error: %s was false in %s at %s:%d\n",       \
-                #x, __func__, __FILE__, __LINE__);                        \
-            exit(EXIT_FAILURE);                                           \
-        }                                                                 \
-    } while (0)
+    // Check if errno is non-zero, and if so, print an error message and exit with an error.
+    static void print_errno() {
+        if (errno != 0) {
+            std::cerr << "Error: errno " << errno << " in " << __func__ << "at " << __FILE__ << ":" << __LINE__ << "\n"
+                      << strerror(errno) << "\n";
+            exit(EXIT_FAILURE);
+        }
+    }
 
-// Check if errno is non-zero, and if so, print an error message and exit with an error.
-#define PRINT_ERRNO()                                                  \
-    do {                                                               \
-        if (errno != 0) {                                              \
-            fprintf(stderr, "Error: errno %d in %s at %s:%d\n%s\n",    \
-              errno, __func__, __FILE__, __LINE__, strerror(errno));   \
-            exit(EXIT_FAILURE);                                        \
-        }                                                              \
-    } while (0)
+    static void check_errno(int x) {
+        if (x != 0) {
+            print_errno();
+        }
+    }
 
-
-// Set `errno` to 0 and evaluate `x`. If `errno` changed, describe it and exit.
-#define CHECK_ERRNO(x)                                                             \
-    do {                                                                           \
-        errno = 0;                                                                 \
-        (void) (x);                                                                \
-        PRINT_ERRNO();                                                             \
-    } while (0)
-
-// Note: the while loop above wraps the statements so that the macro can be used with a semicolon
-// for example: if (a) CHECK(x); else CHECK(y);
-
-
-// Print an error message and exit with an error.
-inline static void fatal(const char *fmt, ...) {
-    va_list fmt_args;
-
-    fprintf(stderr, "Error: ");
-    va_start(fmt_args, fmt);
-    vfprintf(stderr, fmt, fmt_args);
-    va_end(fmt_args);
-    fprintf(stderr, "\n");
-    exit(EXIT_FAILURE);
-}
+    // Print an error message and exit with an error.
+    template<typename Args>
+    static void fatal(Args &&args...) {
+        std::cerr << "Error: ";
+        std::cerr << std::forward<Args>(args) << "\n";
+        exit(EXIT_FAILURE);
+    }
+};
 
 #endif // MIMUW_SIK_ERR_H
