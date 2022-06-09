@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <iostream>
 #include <cstring>
 #include <netdb.h>
@@ -35,102 +36,59 @@ using port_t = uint16_t;
 using cord_t = uint16_t;
 using Position = std::pair<cord_t, cord_t>;
 
-//size_t get_n_bytes_from_server(int socket_fd, void *buffer, size_t n);
-//
-//void read_str(int socket_fd, Buffer &buf);
 
-inline static int open_tcp_socket() {
-    int socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (socket_fd < 0) {
-        Err::print_errno();
+namespace udp {
+    inline static struct addrinfo *get_addr_info(char *host, char *port) {
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_socktype = SOCK_DGRAM;
+
+        struct addrinfo *address_result;
+        Err::check_errno(getaddrinfo(host, port, &hints, &address_result));
+        return address_result;
     }
-    return socket_fd;
-}
 
-inline static int open_udp_ip6_socket() {
-    int socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socket_fd < 0) {
-        Err::print_errno();
+    inline static int connect_with_gui(struct addrinfo *server_addr_info) {
+        int socket_fd = socket(server_addr_info->ai_family, server_addr_info->ai_socktype, 0);
+        Err::ensure(socket_fd >= 0);
+        Err::check_errno(connect(socket_fd, server_addr_info->ai_addr, server_addr_info->ai_addrlen));
+        return socket_fd;
     }
-    return socket_fd;
+
+    inline static int bind_udp_socket(port_t port) {
+        int socket_fd = socket(AF_INET6, SOCK_DGRAM, 0);
+        Err::ensure(socket_fd >= 0);
+
+        struct sockaddr_in6 addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin6_family = AF_INET6;
+        addr.sin6_port = htons(port);
+        addr.sin6_addr = in6addr_any;
+
+        Err::check_errno(bind(socket_fd, (struct sockaddr *) &addr, (socklen_t) sizeof(addr)));
+        return socket_fd;
+    }
 }
 
-inline static void bind_ip6_socket(int socket_fd, uint16_t port) {
-    struct sockaddr_in address{};
-    memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_port = htons(port);
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
+namespace tcp {
+    inline static struct addrinfo *get_addr_info(char *host, char *port) {
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_socktype = SOCK_STREAM;
 
+        struct addrinfo *address_result;
+        Err::check_errno(getaddrinfo(host, port, &hints, &address_result));
+        return address_result;
+    }
 
-//    struct sockaddr_in6 address;
-//    address.sin6_family = AF_INET6;
-//    address.sin6_flowinfo = 0;
-//    address.sin6_addr = in6addr_any;
-//    address.sin6_port = htons(port);
-//    address.sin6_scope_id = 0;
-    Err::check_errno(bind(socket_fd, (struct sockaddr *) &address,
-                          (socklen_t) sizeof(address)));
-}
-
-inline static struct sockaddr_in get_send_address(const char *host, uint16_t port) {
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(struct addrinfo));
-//    hints.ai_family = AF_INET6; // IPv4
-    hints.ai_family = AF_INET; // IPv4
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = IPPROTO_UDP;
-
-    struct addrinfo *address_result;
-    Err::check_errno(getaddrinfo(host, nullptr, &hints, &address_result));
-
-//    struct sockaddr_in6 address;
-//    send_address.sin6_family = AF_INET6; // IPv4
-//    send_address.sin6_addr = in6addr_any;
-//    send_address.sin6_addr =
-//            ((struct sockaddr_in6 *) (address_result->ai_addr))->sin6_addr; // IP address
-//    send_address.sin6_port = htons(port); // port from the command line
-    struct sockaddr_in address;
-    address.sin_family = AF_INET; // IPv4
-    address.sin_addr.s_addr =
-            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-    address.sin_port = htons(port);
-
-    freeaddrinfo(address_result);
-
-    return address;
-}
-
-
-inline static struct sockaddr_in get_address(char *host, uint16_t port) {
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET; // IPv4
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    struct addrinfo *address_result;
-    Err::check_errno(getaddrinfo(host, NULL, &hints, &address_result));
-
-//    struct sockaddr_in6 address;
-//    address.sin6_family = AF_INET6; // IPv4
-//    address.sin6_addr = in6addr_any;
-//    .s_addr =
-//            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr.s_addr; // IP address
-//    address.sin6_port = htons(port);
-    struct sockaddr_in address;
-    address.sin_family = AF_INET; // IPv4
-    address.sin_addr =
-            ((struct sockaddr_in *) (address_result->ai_addr))->sin_addr; // IP address
-    address.sin_port = htons(port);
-
-    freeaddrinfo(address_result);
-
-    return address;
-}
-
-inline static void connect_socket(int socket_fd, const struct sockaddr_in *address) {
-    Err::check_errno(connect(socket_fd, (struct sockaddr *) address, sizeof(*address)));
+    inline static int connect_with_server(struct addrinfo *server_addr_info) {
+        int socket_fd = socket(server_addr_info->ai_family, server_addr_info->ai_socktype, 0);
+        Err::ensure(socket_fd >= 0);
+        Err::check_errno(connect(socket_fd, server_addr_info->ai_addr, server_addr_info->ai_addrlen));
+        int yes = 1;
+        Err::check_errno(setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, (char *) &yes, sizeof(int)));
+        return socket_fd;
+    }
 }
 
 inline static size_t get_n_bytes_from_server(int socket_fd, void *buffer, const size_t n) {
@@ -144,6 +102,24 @@ inline static size_t get_n_bytes_from_server(int socket_fd, void *buffer, const 
     }
     INFO("Received " << received_length << " bytes from server");
     return (size_t) received_length;
+}
+
+inline static uint8_t get_uint8_t_from_server(int socket_fd) {
+    char local_buf[sizeof(uint8_t)];
+    get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint8_t));
+    return *(uint8_t *) local_buf;
+}
+
+inline static uint16_t get_uint16_t_from_server(int socket_fd) {
+    char local_buf[sizeof(uint16_t)];
+    get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint16_t));
+    return be16toh(*(uint16_t *) local_buf);
+}
+
+inline static uint32_t get_uint32_t_from_server(int socket_fd) {
+    char local_buf[sizeof(uint32_t)];
+    get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint32_t));
+    return be32toh(*(uint32_t *) local_buf);
 }
 
 inline static void read_str(int socket_fd, Buffer &buf) {

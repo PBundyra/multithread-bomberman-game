@@ -20,7 +20,7 @@ public:
     // Check if errno is non-zero, and if so, print an error message and exit with an error.
     static void print_errno() {
         if (errno != 0) {
-            std::cerr << "Error: errno " << errno << " in " << __func__ << "at " << __FILE__ << ":" << __LINE__ << "\n"
+            std::cerr << "Error: errno " << errno << " in " << __func__ << " at " << __FILE__ << ":" << __LINE__ << "\n"
                       << strerror(errno) << "\n";
             exit(EXIT_FAILURE);
         }

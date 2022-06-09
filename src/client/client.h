@@ -12,8 +12,8 @@ typedef struct input_params_t {
     std::string gui_host;
     port_t server_port;
     std::string server_host;
-    struct sockaddr_in server_addr;
-    struct sockaddr_in gui_addr;
+    struct addrinfo *server_info;
+    struct addrinfo *gui_info;
 } input_params_t;
 
 input_params_t parse_cli_params(int argc, char **argv);
@@ -26,15 +26,14 @@ private:
     std::string gui_host;
     port_t server_port;
     std::string server_host;
-    struct sockaddr_in server_addr;
-    struct sockaddr_in gui_addr;
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
     Game game;
     std::atomic_bool is_game_started;
-    int tcp_socket_fd;
-    int udp_socket_fd;
+    int server_socket_fd;
+    int gui_send_socket_fd;
+    int gui_rec_socket_fd;
 
     void handle_hello_msg(Buffer &buf);
 
@@ -63,20 +62,18 @@ public:
                                                     gui_port(input_params.gui_port), gui_host(input_params.gui_host),
                                                     server_port(input_params.server_port),
                                                     server_host(input_params.server_host),
-                                                    server_addr(input_params.server_addr),
-                                                    gui_addr(input_params.gui_addr),
                                                     is_game_started(false) {
-        tcp_socket_fd = open_tcp_socket();
-        connect_socket(tcp_socket_fd, &input_params.server_addr);
+        server_socket_fd = tcp::connect_with_server(input_params.server_info);
         INFO("Connected to server");
-        udp_socket_fd = open_udp_ip6_socket();
-        bind_ip6_socket(udp_socket_fd, input_params.port);
+        gui_send_socket_fd = udp::connect_with_gui(input_params.gui_info);
+        gui_rec_socket_fd = udp::bind_udp_socket(port);
         INFO("Connected to GUI");
     }
 
     ~Client() {
-        close(tcp_socket_fd);
-        close(udp_socket_fd);
+        close(server_socket_fd);
+        close(gui_send_socket_fd);
+        close(gui_rec_socket_fd);
     }
 
     void run();

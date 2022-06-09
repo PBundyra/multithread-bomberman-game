@@ -39,7 +39,7 @@ input_params_t parse_cli_params(int argc, char **argv) {
     input_params_t params;
     po::options_description desc("In order to suppress logging compile with -DNDEBUG option.\nAllowed options");
     desc.add_options()
-            ("help,h", "produce help message")
+            ("help,h", "Produce help message")
             ("display-address,d", po::value<string>()->required(), "Set the display address")
             ("player-name,n", po::value<string>()->required(), "Set the player name")
             ("port,p", po::value<string>()->required(), "Set the port")
@@ -52,16 +52,18 @@ input_params_t parse_cli_params(int argc, char **argv) {
     }
     po::notify(vm);
     try {
-        string display_address = vm["display-address"].as<string>();
         string server_address = vm["server-address"].as<string>();
         size_t server_port_ind = server_address.find_last_of(':');
         params.server_port = numeric_cast<port_t>(lexical_cast<int>(server_address.substr(server_port_ind + 1)));
         params.server_host = server_address.substr(0, server_port_ind);
-        params.server_addr = get_address(&params.server_host[0], params.server_port);
+        params.server_info = tcp::get_addr_info(&params.server_host[0], &server_address[server_port_ind + 1]);
+
+        string display_address = vm["display-address"].as<string>();
         size_t gui_port_ind = display_address.find_last_of(':');
         params.gui_port = numeric_cast<port_t>(lexical_cast<int>(display_address.substr(gui_port_ind + 1)));
         params.gui_host = display_address.substr(0, gui_port_ind);
-        params.gui_addr = get_send_address(&params.gui_host[0], params.gui_port);
+        params.gui_info = udp::get_addr_info(&params.gui_host[0], &display_address[gui_port_ind + 1]);
+
         params.player_name = vm["player-name"].as<string>();
         params.port = numeric_cast<port_t>(lexical_cast<int>(vm["port"].as<string>()));
     } catch (bad_lexical_cast &e) {
@@ -86,27 +88,22 @@ input_params_t parse_cli_params(int argc, char **argv) {
 }
 
 size_t Client::get_msg_from_gui() {
-    auto address_length = (socklen_t)
-            sizeof(gui_addr);
+    INFO("Waiting for message from GUI");
     errno = 0;
-    ssize_t received_length = recvfrom(udp_socket_fd, buf_gui_to_server.get_buffer(), BUFFER_SIZE,
-                                       0,
-                                       (struct sockaddr *) &gui_addr,
-                                       &address_length);
+    ssize_t received_length = recv(gui_rec_socket_fd, buf_gui_to_server.get_buffer(), BUFFER_SIZE, 0);
     if (received_length < 0) {
         Err::print_errno();
     }
+    INFO("Received " << received_length << " bytes from GUI");
     return (size_t) received_length;
 }
 
 void Client::send_msg_to_gui() {
-    auto address_length = (socklen_t)
-            sizeof(gui_addr);
     INFO("Sending message to GUI");
     Buffer::print_buffer(buf_server_to_gui.get_buffer(), buf_server_to_gui.get_no_written_bytes());
-    ssize_t sent_length = sendto(udp_socket_fd, buf_server_to_gui.get_buffer(),
-                                 buf_server_to_gui.get_no_written_bytes(), 0,
-                                 (struct sockaddr *) &gui_addr, address_length);
+    errno = 0;
+    ssize_t sent_length = send(gui_send_socket_fd, buf_server_to_gui.get_buffer(),
+                               buf_server_to_gui.get_no_written_bytes(), 0);
     INFO("Message to GUI sent");
     if (sent_length < 0) {
         Err::print_errno();
@@ -114,7 +111,6 @@ void Client::send_msg_to_gui() {
 }
 
 void Client::parse_msg_from_gui(const size_t msg_len) {
-    Err::ensure(msg_len == 2 || msg_len == 1);
     INFO("Received message from GUI");
     uint8_t msg_code = buf_gui_to_server.read_1_byte();
     if (is_game_started) {      // checks if the message from gui is valid and  sends PlaceBomb or PlaceBlock or Move
@@ -159,7 +155,7 @@ void Client::send_msg_to_server() {
         INFO("Sending message to server");
         errno = 0;
         Buffer::print_buffer(buf_gui_to_server.get_buffer(), buf_gui_to_server.get_no_written_bytes());
-        ssize_t sent_length = send(tcp_socket_fd, buf_gui_to_server.get_buffer(),
+        ssize_t sent_length = send(server_socket_fd, buf_gui_to_server.get_buffer(),
                                    buf_gui_to_server.get_no_written_bytes(), 0);
         if (sent_length < 0) {
             Err::print_errno();
@@ -171,18 +167,18 @@ void Client::send_msg_to_server() {
 
 void Client::handle_hello_msg(Buffer &buf) {
     char local_buf[sizeof(uint16_t)];
-    read_str(tcp_socket_fd, buf);                         // server name
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint8_t));
+    read_str(server_socket_fd, buf);                         // server name
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(uint8_t));
     buf.write_into_buffer(*(uint8_t *) local_buf);              // players count
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // size x
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // size y
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // game length
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // explosion radius
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(uint16_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(uint16_t));
     buf.write_into_buffer(*(uint16_t *) local_buf);             // bomb timer
     game = Game(buf);
     buf.reset_buffer();
@@ -190,7 +186,7 @@ void Client::handle_hello_msg(Buffer &buf) {
 }
 
 void Client::handle_accepted_player_msg(Buffer &buf) {
-    Player::read_player(tcp_socket_fd, buf);
+    Player::read_player(server_socket_fd, buf);
     player_id_t player_id = buf_server_to_gui.read_1_byte();
     Player player(buf_server_to_gui);
     game.add_player(player_id, player);
@@ -200,7 +196,7 @@ void Client::handle_accepted_player_msg(Buffer &buf) {
 
 void Client::handle_game_started_msg(Buffer &buf) {
     char buffer[sizeof(map_len_t)];
-    get_n_bytes_from_server(tcp_socket_fd, buffer, sizeof(map_len_t));
+    get_n_bytes_from_server(server_socket_fd, buffer, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) buffer);
     for (map_len_t i = 0; i < map_len; i++) {
         buf.reset_buffer();
@@ -211,13 +207,13 @@ void Client::handle_game_started_msg(Buffer &buf) {
 
 void Client::handle_turn_msg(Buffer &buf) {
     char local_buf[sizeof(list_len_t)];
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(turn_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(turn_t));
     turn_t turn = be16toh(*(turn_t *) local_buf);
     game.set_turn(turn);
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(list_len_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(list_len_t));
     list_len_t list_len = be32toh(*(list_len_t *) local_buf);
     for (list_len_t i = 0; i < list_len; i++) {
-        deserialize_event(tcp_socket_fd, buf, game);
+        deserialize_event(server_socket_fd, buf, game);
     }
     game.add_scores();
     game.erase_destroyed_blocks();
@@ -227,11 +223,11 @@ void Client::handle_turn_msg(Buffer &buf) {
 
 void Client::handle_game_ended_msg(Buffer &buf) {
     char local_buf[sizeof(map_len_t)];
-    get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(map_len_t));
+    get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(map_len_t));
     map_len_t map_len = be32toh(*(map_len_t *) local_buf);
     for (map_len_t i = 0; i < map_len; i++) {
-        get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(player_id_t));
-        get_n_bytes_from_server(tcp_socket_fd, local_buf, sizeof(score_t));
+        get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(player_id_t));
+        get_n_bytes_from_server(server_socket_fd, local_buf, sizeof(score_t));
     }
     is_game_started = false;
     buf.reset_buffer();
@@ -254,7 +250,7 @@ void Client::handle_game_ended_msg(Buffer &buf) {
     do {
         buf_server_to_gui.reset_buffer();
         INFO("Waiting for message from server");
-        get_n_bytes_from_server(tcp_socket_fd, local_buf, 1);
+        get_n_bytes_from_server(server_socket_fd, local_buf, 1);
         INFO("Received message from server");
         switch (local_buf[0]) {
             case HELLO:
