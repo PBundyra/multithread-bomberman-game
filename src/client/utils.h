@@ -29,12 +29,12 @@ constexpr bool debug = true;
         }                                           \
     } while (0)
 
-using str_len_t = uint8_t;
-using list_len_t = uint32_t;
-using map_len_t = uint32_t;
-using port_t = uint16_t;
-using cord_t = uint16_t;
-using Position = std::pair<cord_t, cord_t>;
+//using uint8_t = uint8_t;
+//using uint32_t = uint32_t;
+//using uint32_t = uint32_t;
+//using uint16_t = uint16_t;
+//using uint16_t = uint16_t;
+using Position = std::pair<uint16_t, uint16_t>;
 
 
 namespace udp {
@@ -55,7 +55,7 @@ namespace udp {
         return socket_fd;
     }
 
-    inline static int bind_udp_socket(port_t port) {
+    inline static int bind_udp_socket(uint16_t port) {
         int socket_fd = socket(AF_INET6, SOCK_DGRAM, 0);
         Err::ensure(socket_fd >= 0);
 
@@ -124,8 +124,8 @@ inline static uint32_t get_uint32_t_from_server(int socket_fd) {
 
 inline static void read_str(int socket_fd, Buffer &buf) {
     char local_buf[MAX_STR_LEN];
-    get_n_bytes_from_server(socket_fd, local_buf, sizeof(str_len_t));
-    auto str_len = (str_len_t) local_buf[0];
+    get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint8_t));
+    auto str_len = (uint8_t) local_buf[0];
     buf.write_into_buffer(str_len);
     get_n_bytes_from_server(socket_fd, local_buf, str_len);
     buf.write_into_buffer(local_buf, str_len);

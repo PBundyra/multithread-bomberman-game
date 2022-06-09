@@ -6,11 +6,11 @@
 #include "game.h"
 
 typedef struct input_params_t {
-    port_t port;
+    uint16_t port;
     std::string player_name;
-    port_t gui_port;
+    uint16_t gui_port;
     std::string gui_host;
-    port_t server_port;
+    uint16_t server_port;
     std::string server_host;
     struct addrinfo *server_info;
     struct addrinfo *gui_info;
@@ -20,11 +20,11 @@ input_params_t parse_cli_params(int argc, char **argv);
 
 class Client {
 private:
-    port_t port;
+    uint16_t port;
     std::string player_name;
-    port_t gui_port;
+    uint16_t gui_port;
     std::string gui_host;
-    port_t server_port;
+    uint16_t server_port;
     std::string server_host;
 
     Buffer buf_server_to_gui;

@@ -11,7 +11,7 @@ void Bomb::serialize_bomb(Buffer &buf) const {
 }
 
 void Game::serialize_players(Buffer &buf) {
-    auto players_map_size = (map_len_t) players.size();
+    auto players_map_size = (uint32_t) players.size();
     buf.write_into_buffer(htobe32(players_map_size));
     for (auto &player: players) {
         buf.write_into_buffer(player.first);
@@ -20,7 +20,7 @@ void Game::serialize_players(Buffer &buf) {
 }
 
 void Game::serialize_players_positions(Buffer &buf) {
-    auto players_positions_map_size = (map_len_t) players_positions.size();
+    auto players_positions_map_size = (uint32_t) players_positions.size();
     buf.write_into_buffer(htobe32(players_positions_map_size));
     for (auto &player: players_positions) {
         buf.write_into_buffer(player.first);
@@ -30,7 +30,7 @@ void Game::serialize_players_positions(Buffer &buf) {
 }
 
 void Game::serialize_blocks(Buffer &buf) {
-    auto blocks_list_len = (list_len_t) blocks.size();
+    auto blocks_list_len = (uint32_t) blocks.size();
     buf.write_into_buffer(htobe32(blocks_list_len));
     for (auto &position: blocks) {
         buf.write_into_buffer(htobe16(position.first));
@@ -39,7 +39,7 @@ void Game::serialize_blocks(Buffer &buf) {
 }
 
 void Game::serialize_bombs(Buffer &buf) {
-    auto bombs_list_len = (list_len_t) bombs.size();
+    auto bombs_list_len = (uint32_t) bombs.size();
     buf.write_into_buffer(htobe32(bombs_list_len));
     for (auto &bomb: bombs) {
         bomb.second.serialize_bomb(buf);
@@ -47,7 +47,7 @@ void Game::serialize_bombs(Buffer &buf) {
 }
 
 void Game::serialize_explosions(Buffer &buf) {
-    auto explosions_list_len = (list_len_t) explosions.size();
+    auto explosions_list_len = (uint32_t) explosions.size();
     buf.write_into_buffer(htobe32(explosions_list_len));
     for (auto &position: explosions) {
         buf.write_into_buffer(htobe16(position.first));
@@ -56,7 +56,7 @@ void Game::serialize_explosions(Buffer &buf) {
 }
 
 void Game::serialize_scores(Buffer &buf) {
-    auto scores_map_len = (map_len_t) scores.size();
+    auto scores_map_len = (uint32_t) scores.size();
     buf.write_into_buffer(htobe32(scores_map_len));
     for (auto &score: scores) {
         buf.write_into_buffer(score.first);
@@ -73,8 +73,8 @@ void Game::serialize_lobby_respond(Buffer &buf) {
     buf.reset_buffer();
     uint8_t msg_code = 0;
     buf.write_into_buffer(msg_code);
-    buf.write_into_buffer((str_len_t) server_name.size());
-    buf.write_into_buffer(server_name.c_str(), (str_len_t) server_name.size());
+    buf.write_into_buffer((uint8_t) server_name.size());
+    buf.write_into_buffer(server_name.c_str(), (uint8_t) server_name.size());
     buf.write_into_buffer(players_count);
     buf.write_into_buffer(htobe16(size_x));
     buf.write_into_buffer(htobe16(size_y));
@@ -88,8 +88,8 @@ void Game::serialize_game_respond(Buffer &buf) {
     buf.reset_buffer();
     uint8_t msg_code = 1;
     buf.write_into_buffer(msg_code);
-    buf.write_into_buffer((str_len_t) server_name.size());
-    buf.write_into_buffer(server_name.c_str(), (str_len_t) server_name.size());
+    buf.write_into_buffer((uint8_t) server_name.size());
+    buf.write_into_buffer(server_name.c_str(), (uint8_t) server_name.size());
     buf.write_into_buffer(htobe16(size_x));
     buf.write_into_buffer(htobe16(size_y));
     buf.write_into_buffer(htobe16(game_length));
@@ -104,8 +104,8 @@ void Game::serialize_game_respond(Buffer &buf) {
 
 void Game::move_player(Buffer &buf) {
     player_id_t player_id = buf.read_1_byte();
-    cord_t x = buf.read_2_bytes();
-    cord_t y = buf.read_2_bytes();
+    uint16_t x = buf.read_2_bytes();
+    uint16_t y = buf.read_2_bytes();
     INFO("Player " << player_id << " moved to (" << x << ", " << y << ")");
     players_positions[player_id] = {x, y};
 }
@@ -116,16 +116,16 @@ void Game::kill_player(Buffer &buf) {
 }
 
 void Game::place_block(Buffer &buf) {
-    cord_t x = buf.read_2_bytes();
-    cord_t y = buf.read_2_bytes();
+    uint16_t x = buf.read_2_bytes();
+    uint16_t y = buf.read_2_bytes();
     INFO("Block placed at (" << x << ", " << y << ")");
     blocks.insert(Position(x, y));
 }
 
 void Game::place_bomb(Buffer &buf) {
     bomb_id_t bomb_id = buf.read_4_bytes();
-    cord_t x = buf.read_2_bytes();
-    cord_t y = buf.read_2_bytes();
+    uint16_t x = buf.read_2_bytes();
+    uint16_t y = buf.read_2_bytes();
     Position position(x, y);
     Bomb bomb(position, bomb_timer);
     INFO("Bomb " << bomb_id << " placed at (" << x << ", " << y << ")");
@@ -135,11 +135,11 @@ void Game::place_bomb(Buffer &buf) {
 void Game::explode_bomb(Buffer &buf) {
     bomb_id_t bomb_id = buf.read_4_bytes();
     Bomb bomb = bombs.at(bomb_id);
-    cord_t x = bomb.pos.first;
-    cord_t y = bomb.pos.second;
+    uint16_t x = bomb.pos.first;
+    uint16_t y = bomb.pos.second;
     INFO("Bomb " << bomb_id << " exploded at (" << x << ", " << y << ")");
 
-    for (cord_t i = 0; i <= explosion_radius; i++) {
+    for (uint16_t i = 0; i <= explosion_radius; i++) {
         if (x + i < size_x) {
             explosions.insert(std::make_pair(x + i, y));
             if (blocks.find(Position(x + i, y)) != blocks.end()) {
@@ -147,7 +147,7 @@ void Game::explode_bomb(Buffer &buf) {
             }
         }
     }
-    for (cord_t i = 0; i <= explosion_radius; i++) {
+    for (uint16_t i = 0; i <= explosion_radius; i++) {
         if (x - i >= 0) {
             explosions.insert(Position(x - i, y));
             if (blocks.find(Position(x - i, y)) != blocks.end()) {
@@ -155,7 +155,7 @@ void Game::explode_bomb(Buffer &buf) {
             }
         }
     }
-    for (cord_t i = 0; i <= explosion_radius; i++) {
+    for (uint16_t i = 0; i <= explosion_radius; i++) {
         if (y + i < size_y) {
             explosions.insert(Position(x, y + i));
             if (blocks.find(Position(x, y + i)) != blocks.end()) {
@@ -163,7 +163,7 @@ void Game::explode_bomb(Buffer &buf) {
             }
         }
     }
-    for (cord_t i = 0; i <= explosion_radius; i++) {
+    for (uint16_t i = 0; i <= explosion_radius; i++) {
         if (y - i >= 0) {
             explosions.insert(Position(x, y - i));
             if (blocks.find(Position(x, y - i)) != blocks.end()) {

@@ -26,19 +26,19 @@ namespace {
         get_n_bytes_from_server(socket_fd, local_buf, sizeof(bomb_id_t));
         buf.write_into_buffer(*(bomb_id_t *) local_buf);
         game.explode_bomb(buf);
-        get_n_bytes_from_server(socket_fd, local_buf, sizeof(list_len_t));  // list of destroyed robots
-        list_len_t list_len = be32toh(*(uint32_t *) local_buf);
+        get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint32_t));  // list of destroyed robots
+        uint32_t list_len = be32toh(*(uint32_t *) local_buf);
         buf.reset_buffer();
-        for (list_len_t i = 0; i < list_len; i++) {
+        for (uint32_t i = 0; i < list_len; i++) {
             get_n_bytes_from_server(socket_fd, local_buf, sizeof(player_id_t));
             buf.write_into_buffer(*(player_id_t *) local_buf);
             game.kill_player(buf);
         }
         buf.reset_buffer();
-        get_n_bytes_from_server(socket_fd, local_buf, sizeof(list_len_t));  // list of destroyed blocks
+        get_n_bytes_from_server(socket_fd, local_buf, sizeof(uint32_t));  // list of destroyed blocks
         list_len = be32toh(*(uint32_t *) local_buf);
         buf.reset_buffer();
-        for (list_len_t i = 0; i < list_len; i++) {
+        for (uint32_t i = 0; i < list_len; i++) {
             read_position(socket_fd, buf);
             game.destroy_block(buf);
         }
