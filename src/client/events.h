@@ -1,25 +1,19 @@
 #ifndef EVENTS_H
 #define EVENTS_H
 
-using player_id_t = uint8_t;
-using bomb_id_t = uint32_t;
+#include "buffer.h"
+#include "utils.h"
+#include "game.h"
 
-class Event {};
+#define BOMB_PLACED 0
+#define BOMB_EXPLODED 1
+#define PLAYER_MOVED 2
+#define BLOCK_PLACED 3
 
-class BombPlaced : public Event {
-private:
-    bomb_id_t id;
-};
+// Receives a message with a position from the server and writes it to the buffer
+void read_position(int socket_fd, Buffer &buf);
 
-class BombExploded : public Event {
-};
-
-class PlayerMoved : public Event {
-};
-
-class BlockPlaced : public Event {
-};
-
-
+// Receives a message with an event from the server, processes it and makes accordingly the changes in the game
+void deserialize_event(int socket_fd, Buffer &buf, Game &game);
 
 #endif //EVENTS_H

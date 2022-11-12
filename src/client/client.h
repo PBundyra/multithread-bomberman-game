@@ -1,103 +1,82 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <boost/program_options.hpp>
-#include <boost/asio.hpp>
-#include <boost/numeric/conversion/cast.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <iostream>
-#include <string.h>
-#include <limits>
-#include <iostream>
-#include <sstream>
-#include <bitset>
-#include <arpa/inet.h>
-#include <bits/stdc++.h>
-#include <cerrno>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <utility>
-#include <atomic>
-
-
 #include "buffer.h"
-#include "events.h"
-#include "lobby.h"
-#include "map.h"
-#include "player.h"
 #include "utils.h"
-#include "common.h"
-#include "err.h"
-
-using port_t = uint16_t;
+#include "game.h"
 
 typedef struct input_params_t {
     port_t port;
-    string player_name;
+    std::string player_name;
     port_t gui_port;
-    string gui_host;
+    std::string gui_host;
     port_t server_port;
-    string server_host;
-    struct sockaddr_in server_addr;
-    struct sockaddr_in gui_addr;
+    std::string server_host;
+    struct addrinfo *server_info;
+    struct addrinfo *gui_info;
 } input_params_t;
 
 input_params_t parse_cli_params(int argc, char **argv);
 
-void print_cli(input_params_t &params);
-
-
 class Client {
 private:
-    using list_len_t = uint32_t;
-    using map_len_t = uint32_t;
+    port_t port;
+    std::string player_name;
+    port_t gui_port;
+    std::string gui_host;
+    port_t server_port;
+    std::string server_host;
 
     Buffer buf_server_to_gui;
     Buffer buf_gui_to_server;
-    Map map;
-//    Lobby lobby;
-    atomic_bool is_game_started;
-    string name;
-    int tcp_socket_fd;
-    int udp_socket_fd;
+    Game game;
+    std::atomic_bool is_game_started;
+    int server_socket_fd;
+    int gui_send_socket_fd;
+    int gui_rec_socket_fd;
 
-    void parse_events(vector<shared_ptr<Event>> &events);
+    void handle_hello_msg(Buffer &buf);
 
-    void parse_hello(const char *msg);
+    void handle_accepted_player_msg(Buffer &buf);
 
-    void gui_to_server_handler();
+    void handle_game_started_msg(Buffer &buf);
 
-    void server_to_gui_handler();
+    void handle_turn_msg(Buffer &buf);
 
-    void receive_hello();
+    void handle_game_ended_msg(Buffer &buf);
+
+    size_t get_msg_from_gui();
+
+    void send_msg_to_gui();
+
+    void parse_msg_from_gui(size_t msg_len);
+
+    void send_msg_to_server();
+
+    [[noreturn]] void gui_to_server_handler();
+
+    [[noreturn]] void server_to_gui_handler();
 
 public:
-    Client(input_params_t &input_params) : name(input_params.player_name) {
-        is_game_started = false;
-        tcp_socket_fd = open_tcp_socket();
-        cout << "tcp_socket_fd: " << tcp_socket_fd << endl;
-        connect_socket(tcp_socket_fd, &input_params.server_addr);
-        udp_socket_fd = open_udp_socket();
-//        receive_hello();
+    explicit Client(input_params_t &input_params) : port(input_params.port), player_name(input_params.player_name),
+                                                    gui_port(input_params.gui_port), gui_host(input_params.gui_host),
+                                                    server_port(input_params.server_port),
+                                                    server_host(input_params.server_host),
+                                                    is_game_started(false) {
+        server_socket_fd = tcp::connect_with_server(input_params.server_info);
+        INFO("Connected to server");
+        gui_send_socket_fd = udp::connect_with_gui(input_params.gui_info);
+        gui_rec_socket_fd = udp::bind_udp_socket(port);
+        INFO("Connected to GUI");
     }
 
     ~Client() {
-        close(tcp_socket_fd);
-        close(udp_socket_fd);
+        close(server_socket_fd);
+        close(gui_send_socket_fd);
+        close(gui_rec_socket_fd);
     }
 
-    void run(input_params_t &params);
+    void run();
 };
 
 #endif //CLIENT_H

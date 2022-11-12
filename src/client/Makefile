@@ -4,22 +4,19 @@ server_src = server
 client_bin = robots-client
 server_bin = robots-server
 
-all: compile_client compile_server
+all: compile_client
 clean: clean_all
 
-buffer: buffer.cpp buffer.h
-	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o buffer buffer.cpp
-
 compile_client: $(client_src).cpp $(client_src).h
-	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o $(client_bin) $(client_src).cpp buffer.cpp -lboost_program_options \
-	&& ./robots-client -p 420 -s students.mimuw.edu.pl:10100 -d 0.0.0.0:321 -n essa
+	$(CCP) -Wall -Wextra -std=c++20 -O2 -pthread -o $(client_bin) \
+ 	$(client_src).cpp buffer.cpp game.cpp player.cpp events.cpp -lboost_program_options
 
+run_client:
+	./$(client_bin) -p 2137 -s students.mimuw.edu.pl:10121 -d 0.0.0.0:10022 -n 🙃🙃🙃
 
 compile_server: $(server_src).cpp
 	$(CCP) -Wall -Wextra -std=c++20 -O2 -o $(server_bin) $(server_src).cpp
 
-clean_binaries:
-	rm *.o
 
 clean_all:
-	rm *.o robots-*
+	rm -f $(client_bin) $(server_bin)
